@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"text/tabwriter"
 
 	"github.com/fuckssh/fuckssh/internal/config"
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -35,17 +33,15 @@ func WriteHostsReport(stdout, stderr io.Writer, configPath string, entries []con
 }
 
 func formatHostsTable(entries []config.HostEntry) string {
-	var buf bytes.Buffer
-	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-	_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+	headers := []string{
 		i18n.T(i18n.KeyTableAlias),
 		i18n.T(i18n.KeyTableHostname),
 		i18n.T(i18n.KeyTablePort),
 		i18n.T(i18n.KeyTableUser),
-	)
-	for _, e := range entries {
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", e.Alias, e.HostName, e.Port, e.User)
 	}
-	_ = tw.Flush()
-	return buf.String()
+	rows := make([][]string, len(entries))
+	for i, e := range entries {
+		rows[i] = []string{e.Alias, e.HostName, e.Port, e.User}
+	}
+	return formatBorderedTable(headers, rows)
 }

@@ -77,4 +77,9 @@ func TestFormatHostsTable_columnAlignment(t *testing.T) {
 	if !strings.Contains(out, "srv1") || !strings.Contains(out, "srv2") {
 		t.Fatalf("unexpected output:\n%s", out)
 	}
+	for _, box := range []string{"┌", "┬", "┐", "├", "┼", "┤", "└", "┴", "┘", "│", "─"} {
+		if !strings.Contains(out, box) {
+			t.Errorf("output missing box char %q in:\n%s", box, out)
+		}
+	}
 }
