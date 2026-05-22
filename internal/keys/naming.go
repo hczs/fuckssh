@@ -27,6 +27,11 @@ func KeyPaths(alias string) (priv, pub string) {
 	return priv, pub
 }
 
+// SanitizeAlias 将 Host 别名规范为安全文件名片段（字母数字、连字符、下划线）。
+func SanitizeAlias(alias string) string {
+	return sanitizeAlias(alias)
+}
+
 func sanitizeAlias(alias string) string {
 	alias = strings.TrimSpace(alias)
 	if alias == "" {

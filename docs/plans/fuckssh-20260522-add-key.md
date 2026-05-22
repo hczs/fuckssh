@@ -3,7 +3,7 @@
 ## 当前进度
 
 - [x] Task 1: config 包 — 修改前备份与追加 Host 块
-- [ ] Task 2: wizard 包 — huh 表单与密钥模式流程
+- [x] Task 2: wizard 包 — huh 表单与密钥模式流程
 - [ ] Task 3: add 子命令 — 串联向导与成功提示
 
 > 从第一个 `[ ]` 开始执行。完成后将 `[ ]` 改为 `[x]`。
