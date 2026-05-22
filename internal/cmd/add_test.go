@@ -143,7 +143,7 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 		t.Errorf("entry = %+v", e)
 	}
 	privName, _ := keys.KeyPaths("test-vps")
-	wantIdentity := ".ssh/keys/" + privName
+	wantIdentity := "~/.ssh/keys/" + privName
 	if e.IdentityFile != wantIdentity {
 		t.Errorf("IdentityFile = %q, want %q", e.IdentityFile, wantIdentity)
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/fuckssh/fuckssh/internal/config"
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
@@ -33,11 +34,12 @@ type PasswordModeInput struct {
 
 // passwordFlowDeps 注入备份、写密钥、追加 config、部署等步骤，便于单测验证调用顺序。
 type passwordFlowDeps struct {
-	backup     func(configPath string) (string, error)
-	writeKeys  func(sshDir, alias string) (privPath, pubLine string, err error)
-	appendHost func(configPath string, entry config.HostEntry) error
-	deploy     func(ctx context.Context, opts sshclient.DeployOpts) error
-	onProgress func(msg string)
+	backup              func(configPath string) (string, error)
+	writeKeys           func(sshDir, alias string) (privPath, pubLine string, err error)
+	appendHost          func(configPath string, entry config.HostEntry) error
+	deploy              func(ctx context.Context, opts sshclient.DeployOpts) error
+	promptPermissionFix func(ctx context.Context, perm *sshclient.AuthorizedKeysNotWritableError) error
+	onProgress          func(msg string)
 }
 
 // RunPasswordMode 通过 huh 逐项收集密码模式字段并执行完整编排。
@@ -233,7 +235,7 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 		rollbackPasswordChanges(configPath, setup)
 		return nil, setup.bakPath, err
 	}
-	if err := deployPublicKey(ctx, in, setup.pubLine, deps); err != nil {
+	if err := deployPublicKeyWithRetry(ctx, in, setup.pubLine, deps); err != nil {
 		rollbackPasswordChanges(configPath, setup)
 		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath, true)
 	}
@@ -255,6 +257,12 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 // formatPasswordDeployError 将底层 deploy 错误转为用户可读中文（保留 %w 供退出码映射）。
 // rolledBack 为 true 时表示本地 config/密钥已回滚。
 func formatPasswordDeployError(err error, bakPath string, rolledBack bool) error {
+	if errors.Is(err, ErrDeployAborted) {
+		if rolledBack {
+			return fmt.Errorf("%s，已撤销本次对本地 config 与密钥的修改", i18n.T(i18n.KeyWizardPermFixCancelled))
+		}
+		return fmt.Errorf("%s", i18n.T(i18n.KeyWizardPermFixCancelled))
+	}
 	if rolledBack {
 		if errors.Is(err, sshclient.ErrDeployAuthFailed) {
 			return fmt.Errorf("SSH 密码认证失败，已撤销本次对本地 config 与密钥的修改: %w", err)

@@ -140,6 +140,63 @@ func TestDeployPublicKey_usesWriteFileNotBase64(t *testing.T) {
 	}
 }
 
+func TestDeployPublicKey_notWritable_returnsGuidance(t *testing.T) {
+	prev := dialSSH
+	defer func() { dialSSH = prev }()
+
+	const absPath = "/home/boco/.ssh/authorized_keys"
+	dialSSH = func(ctx context.Context, opts DeployOpts) (sshClient, error) {
+		return &notWritableFake{path: absPath}, nil
+	}
+
+	err := DeployPublicKey(context.Background(), DeployOpts{
+		Host: "10.12.2.220", Port: "22", User: "boco", Password: "pw",
+		PublicLine: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAInewkey comment\n",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var detail *AuthorizedKeysNotWritableError
+	if !errors.As(err, &detail) {
+		t.Fatalf("error = %v, want *AuthorizedKeysNotWritableError", err)
+	}
+	if detail.User != "boco" || detail.AbsPath != absPath {
+		t.Fatalf("detail = %+v", detail)
+	}
+	if !strings.Contains(detail.SSHCommand, "boco@10.12.2.220") {
+		t.Errorf("SSHCommand = %q", detail.SSHCommand)
+	}
+	if !strings.Contains(detail.FixCommand, "sudo chown boco:boco") {
+		t.Errorf("FixCommand = %q", detail.FixCommand)
+	}
+	if !strings.Contains(detail.FixCommand, "sudo chmod 600") {
+		t.Errorf("FixCommand = %q", detail.FixCommand)
+	}
+}
+
+type notWritableFake struct {
+	path string
+}
+
+func (n *notWritableFake) RunSession(cmd string) (string, string, int, error) {
+	switch {
+	case strings.Contains(cmd, "readlink -f"), strings.Contains(cmd, `[ ! -e "$f" ]`):
+		return n.path + "\n", "", 0, nil
+	case strings.Contains(cmd, "test -w"):
+		return "no\n", "", 0, nil
+	case strings.Contains(cmd, "mkdir -p"), strings.Contains(cmd, "cat ~/.ssh/authorized_keys"):
+		return "", "", 0, nil
+	default:
+		return "", "", 0, nil
+	}
+}
+
+func (n *notWritableFake) WriteAuthorizedKeys([]byte) error {
+	return errors.New("write authorized_keys: Process exited with status 2")
+}
+
+func (n *notWritableFake) Close() error { return nil }
+
 func TestIsAuthError(t *testing.T) {
 	if !isAuthError(errors.New("ssh: unable to authenticate")) {
 		t.Error("want auth error")

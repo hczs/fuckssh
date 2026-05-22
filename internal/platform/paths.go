@@ -46,8 +46,9 @@ func KeysDir() (string, error) {
 
 // IdentityFileRef 返回适合写入 ssh config 的 IdentityFile 值。
 //
-// 当 absKeyPath 位于 ~/.ssh 下时，使用相对 HOME 的路径（如 .ssh/keys/id_ed25519_fuckssh_my），
-// 便于整份 .ssh 目录迁移；否则回退为绝对路径。
+// 当 absKeyPath 位于 ~/.ssh 下时，使用 ~/.ssh/...（如 ~/.ssh/keys/id_ed25519_fuckssh_my）。
+// OpenSSH 会在各平台将 ~ 展开为用户主目录；裸路径 .ssh/keys/... 在 Windows 上常被当成
+// 当前工作目录相对路径，导致「no such identity」。
 func IdentityFileRef(absKeyPath string) (string, error) {
 	if absKeyPath == "" {
 		return "", fmt.Errorf("platform: empty key path")
@@ -62,9 +63,9 @@ func IdentityFileRef(absKeyPath string) (string, error) {
 
 	rel, err := filepath.Rel(sshDir, absKeyPath)
 	if err != nil || strings.HasPrefix(rel, "..") {
-		return absKeyPath, nil
+		return filepath.ToSlash(absKeyPath), nil
 	}
-	return filepath.ToSlash(filepath.Join(".ssh", rel)), nil
+	return filepath.ToSlash(filepath.Join("~/.ssh", rel)), nil
 }
 
 // ExpandPath 将路径中的 ~ 展开为用户主目录。

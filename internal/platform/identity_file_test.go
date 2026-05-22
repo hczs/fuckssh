@@ -52,7 +52,7 @@ func TestIdentityFileRef_underSSHDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("IdentityFileRef: %v", err)
 	}
-	want := ".ssh/keys/id_ed25519_fuckssh_my"
+	want := "~/.ssh/keys/id_ed25519_fuckssh_my"
 	if got != want {
 		t.Errorf("IdentityFileRef() = %q, want %q", got, want)
 	}
@@ -70,7 +70,8 @@ func TestIdentityFileRef_outsideSSHDir_fallsBackAbsolute(t *testing.T) {
 	if err != nil {
 		t.Fatalf("IdentityFileRef: %v", err)
 	}
-	if got != abs {
-		t.Errorf("IdentityFileRef() = %q, want absolute %q", got, abs)
+	want := filepath.ToSlash(abs)
+	if got != want {
+		t.Errorf("IdentityFileRef() = %q, want %q", got, want)
 	}
 }

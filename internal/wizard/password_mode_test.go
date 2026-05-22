@@ -146,6 +146,69 @@ func TestPasswordMode_reportsProgressSteps(t *testing.T) {
 	}
 }
 
+func TestFormatPasswordDeployError_deployAbortedRolledBack(t *testing.T) {
+	err := formatPasswordDeployError(ErrDeployAborted, "/tmp/config.bak", true)
+	msg := err.Error()
+	if !strings.Contains(msg, "已撤销") {
+		t.Errorf("message = %q, want rollback hint", msg)
+	}
+	if !strings.Contains(msg, "取消") {
+		t.Errorf("message = %q, want cancel hint", msg)
+	}
+}
+
+func TestPasswordMode_retryDeployAfterPermissionFix(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	sshDir := filepath.Join(dir, ".ssh")
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	deployCalls := 0
+	perm := &sshclient.AuthorizedKeysNotWritableError{
+		User: "boco", AbsPath: "/home/boco/.ssh/authorized_keys",
+		SSHCommand: "boco@10.12.2.220",
+		FixCommand: "sudo chown boco:boco /home/boco/.ssh/authorized_keys",
+	}
+	deps := passwordFlowDeps{
+		backup: func(string) (string, error) { return "", nil },
+		writeKeys: func(dir, alias string) (string, string, error) {
+			priv := filepath.Join(dir, "k")
+			if err := os.WriteFile(priv, []byte("priv"), 0o600); err != nil {
+				return "", "", err
+			}
+			return priv, "ssh-ed25519 AAAATEST\n", nil
+		},
+		appendHost: func(string, config.HostEntry) error { return nil },
+		deploy: func(context.Context, sshclient.DeployOpts) error {
+			deployCalls++
+			if deployCalls == 1 {
+				return fmt.Errorf("%w: %w", sshclient.ErrDeployFailed, perm)
+			}
+			return nil
+		},
+		promptPermissionFix: func(context.Context, *sshclient.AuthorizedKeysNotWritableError) error {
+			return nil
+		},
+	}
+
+	in, err := finalizePasswordModeInput(PasswordModeInput{
+		HostName: "10.12.2.220", User: "boco", Password: "pw", Alias: "vps1",
+	})
+	if err != nil {
+		t.Fatalf("finalize: %v", err)
+	}
+
+	_, _, err = executePasswordFlow(context.Background(), in, cfg, deps)
+	if err != nil {
+		t.Fatalf("executePasswordFlow: %v", err)
+	}
+	if deployCalls != 2 {
+		t.Errorf("deployCalls = %d, want 2", deployCalls)
+	}
+}
+
 func TestFormatPasswordDeployError_authMessageRolledBack(t *testing.T) {
 	err := formatPasswordDeployError(
 		fmt.Errorf("%w: %w", sshclient.ErrDeployFailed, sshclient.ErrDeployAuthFailed),
