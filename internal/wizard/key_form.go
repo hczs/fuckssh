@@ -17,19 +17,24 @@ import (
 // keyAuthTestFn 用于密钥连接测试（单测可注入 mock）。
 type keyAuthTestFn func(ctx context.Context, in KeyModeInput) error
 
-// collectKeyModeInput 用堆叠表单逐项收集，私钥路径校验通过后测试 SSH 连接。
-func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn) (KeyModeInput, error) {
+// collectKeyModeInput 用堆叠表单逐项收集；draft 非空时预填（确认页返回修改时用）。
+func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn, draft *KeyModeInput) (KeyModeInput, error) {
 	if testAuth == nil {
 		testAuth = defaultKeyAuthTest
 	}
 	var in KeyModeInput
+	if draft != nil {
+		in = *draft
+	}
+	var keyFeedback connFeedback
 	reveal := &revealState{n: 1}
+	seedRevealKey(reveal, in)
 	emptyMsg := i18n.T(i18n.KeyWizardErrEmpty)
 
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title(i18n.T(i18n.KeyWizardHostIP)).
+				Title(stepTitle(2, i18n.KeyWizardHostIP)).
 				Value(&in.HostName).
 				Validate(func(s string) error {
 					if err := nonEmpty(emptyMsg)(s); err != nil {
@@ -41,7 +46,7 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn) (KeyModeIn
 		).WithHideFunc(hideUntilRevealed(0, reveal)),
 		huh.NewGroup(
 			huh.NewInput().
-				Title(i18n.T(i18n.KeyWizardPort)).
+				Title(stepTitle(3, i18n.KeyWizardPort)).
 				Description(i18n.T(i18n.KeyWizardPortDesc)).
 				Placeholder("22").
 				Value(&in.Port).
@@ -52,7 +57,8 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn) (KeyModeIn
 		).WithHideFunc(hideUntilRevealed(1, reveal)),
 		huh.NewGroup(
 			huh.NewInput().
-				Title(i18n.T(i18n.KeyWizardUser)).
+				Title(stepTitle(4, i18n.KeyWizardUser)).
+				Description(i18n.T(i18n.KeyWizardUserDesc)).
 				Value(&in.User).
 				Validate(func(s string) error {
 					if err := nonEmpty(emptyMsg)(s); err != nil {
@@ -64,11 +70,11 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn) (KeyModeIn
 		).WithHideFunc(hideUntilRevealed(2, reveal)),
 		huh.NewGroup(
 			huh.NewInput().
-				Title(i18n.T(i18n.KeyWizardIdentityFile)).
+				Title(stepTitle(5, i18n.KeyWizardIdentityFile)).
 				Description(i18n.T(i18n.KeyWizardIdentityDesc)).
 				Value(&in.IdentityFile).
 				Validate(func(path string) error {
-					if err := keyIdentityValidate(ctx, &in, testAuth)(path); err != nil {
+					if err := keyIdentityValidate(ctx, &in, testAuth, &keyFeedback)(path); err != nil {
 						return err
 					}
 					reveal.showThrough(4)
@@ -77,11 +83,11 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn) (KeyModeIn
 		).WithHideFunc(hideUntilRevealed(3, reveal)),
 		huh.NewGroup(
 			huh.NewInput().
-				Title(i18n.T(i18n.KeyWizardAlias)).
-				Description(i18n.T(i18n.KeyWizardAliasDesc)).
+				Title(stepTitle(6, i18n.KeyWizardAlias)).
+				DescriptionFunc(func() string { return aliasDescription(&in.HostName) }, &in.HostName).
 				Value(&in.Alias),
 		).WithHideFunc(hideUntilRevealed(4, reveal)),
-	).WithLayout(huh.LayoutStack)
+	).WithLayout(huh.LayoutStack).WithShowErrors(false)
 
 	if err := form.Run(); err != nil {
 		return KeyModeInput{}, err
@@ -102,7 +108,7 @@ func defaultKeyAuthTest(ctx context.Context, in KeyModeInput) error {
 	})
 }
 
-func keyIdentityValidate(ctx context.Context, in *KeyModeInput, testAuth keyAuthTestFn) func(string) error {
+func keyIdentityValidate(ctx context.Context, in *KeyModeInput, testAuth keyAuthTestFn, feedback *connFeedback) func(string) error {
 	return func(path string) error {
 		if strings.TrimSpace(path) == "" {
 			return errors.New(i18n.T(i18n.KeyWizardErrEmpty))
@@ -122,10 +128,13 @@ func keyIdentityValidate(ctx context.Context, in *KeyModeInput, testAuth keyAuth
 		in.IdentityFile = expanded
 
 		reportProgress(i18n.T(i18n.KeyWizardTestingConn))
+		feedback.setTesting()
 		err = testAuth(ctx, *in)
 		if err != nil {
+			feedback.message = ""
 			return errors.New(keyConnectionTestFailureMessage(err))
 		}
+		feedback.setOK()
 		fmt.Fprintf(progressOut, "%s\n", i18n.T(i18n.KeyWizardConnOK))
 		return nil
 	}

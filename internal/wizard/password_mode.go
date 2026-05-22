@@ -43,20 +43,41 @@ type passwordFlowDeps struct {
 // RunPasswordMode 通过 huh 逐项收集密码模式字段并执行完整编排。
 // configPath 为 ssh config 路径（与 cmd --config 一致）。
 func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, string, error) {
-	in, err := collectPasswordModeInput(ctx, nil)
-	if err != nil {
-		return nil, "", err
-	}
-	defer clearPassword(&in.Password)
-
-	final, err := finalizePasswordModeInput(in)
-	if err != nil {
-		return nil, "", err
-	}
-
 	if strings.TrimSpace(configPath) == "" {
 		return nil, "", fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
 	}
+
+	var draft PasswordModeInput
+	var final PasswordModeInput
+	for {
+		in, err := collectPasswordModeInput(ctx, nil, &draft)
+		if err != nil {
+			return nil, "", err
+		}
+		draft = in
+
+		final, err = finalizePasswordModeInput(in)
+		clearPassword(&in.Password)
+		if err != nil {
+			return nil, "", err
+		}
+
+		final.Alias, err = ensureAvailableAlias(configPath, final.Alias)
+		if err != nil {
+			return nil, "", err
+		}
+
+		if err := confirmPasswordRun(final, configPath); err != nil {
+			if errors.Is(err, ErrWizardRetryForm) {
+				// 返回修改：保留全部已填项（含密码）。
+				draft = final
+				continue
+			}
+			return nil, "", err
+		}
+		break
+	}
+
 	sshDir, err := platform.SSHDir()
 	if err != nil {
 		return nil, "", err
@@ -67,6 +88,12 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 }
 
 func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
+	const progressTotal = 4
+	var step int
+	advance := func(msg string) {
+		step++
+		reportProgressStep(step, progressTotal, msg)
+	}
 	return passwordFlowDeps{
 		backup: config.Backup,
 		writeKeys: func(dir, alias string) (string, string, error) {
@@ -82,7 +109,7 @@ func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
 		},
 		appendHost: config.AppendHost,
 		deploy:     sshclient.DeployPublicKey,
-		onProgress: reportProgress,
+		onProgress: advance,
 	}
 }
 

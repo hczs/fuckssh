@@ -3,6 +3,7 @@ package wizard
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -17,31 +18,32 @@ const (
 )
 
 // Run 编排 add 向导：选择模式后进入对应流程。
-// configPath 写入密码模式使用的 ssh config（密钥模式由 cmd 层追加）。
+// configPath 为 ssh config 路径（两种模式均用于别名检测与确认摘要）。
 func Run(configPath string) (*WizardResult, error) {
 	var mode ConnectionMode = ModePassword
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[ConnectionMode]().
-				Title(i18n.T(i18n.KeyWizardConnModeTitle)).
+				Title(stepTitle(1, i18n.KeyWizardConnModeTitle)).
+				Description(modeSelectDescription()).
 				Options(
-					huh.NewOption(i18n.T(i18n.KeyWizardModePassword), ModePassword),
-					huh.NewOption(i18n.T(i18n.KeyWizardModeKey), ModeKey),
+					huh.NewOption(modePasswordLabel(), ModePassword),
+					huh.NewOption(modeKeyLabel(), ModeKey),
 				).
 				Value(&mode),
 		),
 	)
 	if err := form.Run(); err != nil {
-		return nil, err
+		return nil, mapWizardAbort(err)
 	}
 
 	switch mode {
 	case ModeKey:
-		return RunKeyMode()
+		return RunKeyMode(configPath)
 	case ModePassword:
 		result, bakPath, err := RunPasswordMode(context.Background(), configPath)
 		if err != nil {
-			return nil, err
+			return nil, mapWizardAbort(err)
 		}
 		if result != nil {
 			result.PasswordFlowComplete = true
@@ -51,4 +53,30 @@ func Run(configPath string) (*WizardResult, error) {
 	default:
 		return nil, errors.New("wizard: unknown connection mode")
 	}
+}
+
+func modeSelectDescription() string {
+	return i18n.T(i18n.KeyWizardWelcome) + "\n" +
+		i18n.T(i18n.KeyWizardWelcomeETA) + "\n\n" +
+		i18n.T(i18n.KeyWizardConnModeDesc)
+}
+
+// modePasswordLabel 主选项标题 + 副标题（换行展示）。
+func modePasswordLabel() string {
+	return i18n.T(i18n.KeyWizardModePassword) + "\n  " + i18n.T(i18n.KeyWizardModePasswordSub)
+}
+
+func modeKeyLabel() string {
+	return i18n.T(i18n.KeyWizardModeKey) + "\n  " + i18n.T(i18n.KeyWizardModeKeySub)
+}
+
+// mapWizardAbort 将用户取消/返回修改映射为统一提示（仍返回原始错误供退出码判断）。
+func mapWizardAbort(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, huh.ErrUserAborted) || errors.Is(err, ErrWizardRetryForm) {
+		return fmt.Errorf("%s: %w", i18n.T(i18n.KeyWizardCancelled), err)
+	}
+	return err
 }

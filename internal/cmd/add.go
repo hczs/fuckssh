@@ -10,6 +10,7 @@ import (
 	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 	"github.com/fuckssh/fuckssh/internal/wizard"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
 
@@ -78,6 +79,17 @@ func runAdd(stdout, stderr io.Writer) error {
 func printAddSuccess(stdout, stderr io.Writer, configPath string, result *wizard.WizardResult) {
 	wizard.WriteAddSuccessSummary(stderr, result, configPath)
 	fmt.Fprintf(stdout, "ssh %s\n", result.Alias)
+	if result.PasswordFlowComplete && isTerminalWriter(stdout) {
+		fmt.Fprintf(stderr, "%s\n", i18n.T(i18n.KeySummaryReadyHint))
+	}
+}
+
+func isTerminalWriter(w io.Writer) bool {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+	return isatty.IsTerminal(f.Fd())
 }
 
 func configFileExists(path string) bool {

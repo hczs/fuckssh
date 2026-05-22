@@ -40,12 +40,47 @@ type WizardResult struct {
 type fileStatFunc func(name string) (os.FileInfo, error)
 
 // RunKeyMode 通过堆叠表单收集密钥连接所需字段。
-func RunKeyMode() (*WizardResult, error) {
-	in, err := collectKeyModeInput(context.Background(), nil)
-	if err != nil {
-		return nil, err
+func RunKeyMode(configPath string) (*WizardResult, error) {
+	if strings.TrimSpace(configPath) == "" {
+		return nil, fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
 	}
-	return keyModeResult(in, os.Stat)
+
+	var draft KeyModeInput
+	var out KeyModeInput
+	for {
+		in, err := collectKeyModeInput(context.Background(), nil, &draft)
+		if err != nil {
+			return nil, err
+		}
+		draft = in
+
+		out, err = finalizeKeyModeInput(in, os.Stat)
+		if err != nil {
+			return nil, err
+		}
+
+		out.Alias, err = ensureAvailableAlias(configPath, out.Alias)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := confirmKeyRun(out, configPath); err != nil {
+			if errors.Is(err, ErrWizardRetryForm) {
+				draft = out
+				continue
+			}
+			return nil, err
+		}
+		break
+	}
+
+	return &WizardResult{
+		Alias:        out.Alias,
+		HostName:     out.HostName,
+		User:         out.User,
+		Port:         out.Port,
+		IdentityFile: out.IdentityFile,
+	}, nil
 }
 
 func keyModeResult(in KeyModeInput, stat fileStatFunc) (*WizardResult, error) {

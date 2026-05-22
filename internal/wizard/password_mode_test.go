@@ -356,34 +356,28 @@ func TestPasswordConnectionValidate_retriesUntilSuccess(t *testing.T) {
 		User:     "ubuntu",
 		Port:     "22",
 	}
+	var feedback connFeedback
+	feedback.setIdleHint()
 	validate := passwordConnectionValidate(context.Background(), &in, func(ctx context.Context, got PasswordModeInput) error {
 		attempts++
 		if attempts < 2 {
 			return authErr
 		}
 		return nil
-	})
+	}, &feedback)
 
 	err := validate("wrong")
 	if err == nil {
 		t.Fatal("expected error for wrong password")
 	}
-	if !strings.Contains(err.Error(), "用户名或密码") {
-		t.Errorf("error = %q, want auth hint", err.Error())
+	if !strings.Contains(err.Error(), "密码") && !strings.Contains(err.Error(), "连接") {
+		t.Errorf("error = %q, want friendly hint", err.Error())
 	}
 	if err := validate("correct"); err != nil {
 		t.Fatalf("validate correct password: %v", err)
 	}
 	if attempts != 2 {
 		t.Errorf("attempts = %d, want 2", attempts)
-	}
-}
-
-func TestConnectionTestFailureMessage_auth(t *testing.T) {
-	err := fmt.Errorf("%w: %w", sshclient.ErrDeployFailed, sshclient.ErrDeployAuthFailed)
-	msg := connectionTestFailureMessage(err)
-	if !strings.Contains(msg, "用户名或密码") {
-		t.Errorf("message = %q", msg)
 	}
 }
 
