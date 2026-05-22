@@ -4,7 +4,7 @@
 
 - [x] Task 1: platform 包 — SSH 目录路径解析
 - [x] Task 2: config 包 — 受限解析器与 HostEntry 模型
-- [ ] Task 3: list 子命令 — 表格输出
+- [x] Task 3: list 子命令 — 表格输出
 - [ ] Task 4: search 子命令 — 模糊匹配
 
 > 从第一个 `[ ]` 开始执行。完成后将 `[ ]` 改为 `[x]`。
