@@ -51,12 +51,10 @@ func runAdd(stdout, stderr io.Writer) error {
 		return nil
 	}
 
+	configExisted := configFileExists(configPath)
 	bakPath, err := config.Backup(configPath)
 	if err != nil {
 		return err
-	}
-	if bakPath != "" {
-		fmt.Fprintf(stderr, "已备份 config 至 %s\n", bakPath)
 	}
 
 	entry := config.HostEntry{
@@ -67,19 +65,24 @@ func runAdd(stdout, stderr io.Writer) error {
 		IdentityFile: result.IdentityFile,
 	}
 	if err := config.AppendHost(configPath, entry); err != nil {
+		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, true)
 		return err
 	}
 
+	result.BackupPath = bakPath
 	printAddSuccess(stdout, stderr, configPath, result)
 	return nil
 }
 
 func printAddSuccess(stdout, stderr io.Writer, configPath string, result *wizard.WizardResult) {
-	if result.BackupPath != "" {
-		fmt.Fprintf(stderr, "已备份 config 至 %s\n", result.BackupPath)
-	}
+	wizard.WriteAddSuccessSummary(stderr, result, configPath)
 	fmt.Fprintf(stdout, "配置已写入 %s\n", configPath)
 	fmt.Fprintf(stdout, "现在可以执行: ssh %s\n", result.Alias)
+}
+
+func configFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // warnIfSSHMissing 检测系统 ssh；缺失时打印指引但不阻止后续流程。

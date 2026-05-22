@@ -24,7 +24,7 @@ func AppendHost(path string, entry HostEntry) error {
 		return fmt.Errorf("config: IdentityFile 不能为空")
 	}
 
-	exists, err := hostAliasExists(path, entry.Alias)
+	exists, err := HostAliasExists(path, entry.Alias)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,8 @@ func AppendHost(path string, entry HostEntry) error {
 	return nil
 }
 
-func hostAliasExists(path, alias string) (bool, error) {
+// HostAliasExists 检查 config 中是否已有同名 Host 别名（不区分大小写）。
+func HostAliasExists(path, alias string) (bool, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return false, nil
 	}

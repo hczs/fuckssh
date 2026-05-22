@@ -99,12 +99,46 @@ func TestTestPasswordAuth_success_closesClient(t *testing.T) {
 	}
 }
 
-type fakeSSHClient struct{}
+type fakeSSHClient struct {
+	written map[string][]byte
+}
 
 func (f *fakeSSHClient) RunSession(cmd string) (string, string, int, error) {
 	return "", "", 0, nil
 }
+
+func (f *fakeSSHClient) WriteAuthorizedKeys(content []byte) error {
+	if f.written == nil {
+		f.written = make(map[string][]byte)
+	}
+	f.written["authorized_keys"] = append([]byte(nil), content...)
+	return nil
+}
+
 func (f *fakeSSHClient) Close() error { return nil }
+
+func TestDeployPublicKey_usesWriteFileNotBase64(t *testing.T) {
+	prev := dialSSH
+	defer func() { dialSSH = prev }()
+
+	fake := &fakeSSHClient{}
+	dialSSH = func(ctx context.Context, opts DeployOpts) (sshClient, error) {
+		return fake, nil
+	}
+
+	pub := "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAInewkey comment\n"
+	err := DeployPublicKey(context.Background(), DeployOpts{
+		Host: "203.0.113.1", Port: "22", User: "root", Password: "pw",
+		PublicLine: pub,
+	})
+	if err != nil {
+		t.Fatalf("DeployPublicKey: %v", err)
+	}
+	got := fake.written["authorized_keys"]
+	if !strings.Contains(string(got), strings.TrimSpace(pub)) {
+		t.Errorf("authorized_keys = %q, want pub line", got)
+	}
+}
 
 func TestIsAuthError(t *testing.T) {
 	if !isAuthError(errors.New("ssh: unable to authenticate")) {

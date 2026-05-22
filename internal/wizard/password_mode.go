@@ -63,23 +63,7 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 	}
 
 	deps := defaultPasswordFlowDeps(sshDir)
-	setup, err := setupPasswordFlow(ctx, final, configPath, deps)
-	if err != nil {
-		return nil, setup.bakPath, err
-	}
-
-	if err := deployPublicKey(ctx, final, setup.pubLine, deps); err != nil {
-		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath)
-	}
-
-	return &WizardResult{
-		Alias:        final.Alias,
-		HostName:     final.HostName,
-		User:         final.User,
-		Port:         final.Port,
-		IdentityFile: setup.privPath,
-		BackupPath:   setup.bakPath,
-	}, setup.bakPath, nil
+	return executePasswordFlow(ctx, final, configPath, deps)
 }
 
 func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
@@ -103,13 +87,35 @@ func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
 }
 
 type passwordSetupState struct {
-	privPath string
-	pubLine  string
-	bakPath  string
+	privPath            string
+	pubLine             string
+	bakPath             string
+	configExistedBefore bool
+	hostAppended        bool
 }
 
-// setupPasswordFlow 按顺序：备份 config → 生成密钥 → 追加 Host（部署在后续步骤）。
+// needsConfigRollback 为 true 时表示本次流程已备份或已写入 config，失败时需恢复。
+func (s passwordSetupState) needsConfigRollback() bool {
+	return s.bakPath != "" || s.hostAppended
+}
+
+// setupPasswordFlow 按顺序：校验别名 → 备份 config → 生成密钥 → 追加 Host（部署在后续步骤）。
+// 别名冲突在备份前返回，不触发 config 回滚。
 func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath string, deps passwordFlowDeps) (passwordSetupState, error) {
+	if err := ctx.Err(); err != nil {
+		return passwordSetupState{}, err
+	}
+
+	exists, err := config.HostAliasExists(configPath, in.Alias)
+	if err != nil {
+		return passwordSetupState{}, err
+	}
+	if exists {
+		return passwordSetupState{}, fmt.Errorf("%w: %q（请换别名或手动编辑 config）", config.ErrHostExists, in.Alias)
+	}
+
+	state := passwordSetupState{configExistedBefore: configFileExists(configPath)}
+
 	progress := deps.onProgress
 	if progress == nil {
 		progress = func(string) {}
@@ -118,21 +124,32 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 	progress("正在备份 SSH config…")
 	bakPath, err := deps.backup(configPath)
 	if err != nil {
-		return passwordSetupState{}, err
+		return state, err
+	}
+	state.bakPath = bakPath
+
+	if err := ctx.Err(); err != nil {
+		return state, err
 	}
 
 	sshDir, err := platform.SSHDir()
 	if err != nil {
-		return passwordSetupState{bakPath: bakPath}, err
+		return state, err
 	}
 	if err := ensureSSHDir(sshDir); err != nil {
-		return passwordSetupState{bakPath: bakPath}, err
+		return state, err
 	}
 
 	progress("正在生成 Ed25519 密钥…")
 	privPath, pubLine, err := deps.writeKeys(sshDir, in.Alias)
 	if err != nil {
-		return passwordSetupState{bakPath: bakPath}, err
+		return state, err
+	}
+	state.privPath = privPath
+	state.pubLine = pubLine
+
+	if err := ctx.Err(); err != nil {
+		return state, err
 	}
 
 	progress("正在写入 SSH config…")
@@ -144,10 +161,11 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 		IdentityFile: privPath,
 	}
 	if err := deps.appendHost(configPath, entry); err != nil {
-		return passwordSetupState{bakPath: bakPath}, err
+		return state, err
 	}
-	_ = ctx
-	return passwordSetupState{privPath: privPath, pubLine: pubLine, bakPath: bakPath}, nil
+	state.hostAppended = true
+
+	return state, nil
 }
 
 func deployPublicKey(ctx context.Context, in PasswordModeInput, pubLine string, deps passwordFlowDeps) error {
@@ -165,27 +183,48 @@ func deployPublicKey(ctx context.Context, in PasswordModeInput, pubLine string, 
 	})
 }
 
-// executePasswordFlow 供单测验证完整编排顺序（备份 → 密钥 → config → 部署）。
+// rollbackPasswordChanges 在失败时撤销本次流程对本地 config 与密钥的修改。
+// 仅当已备份或已追加 Host 时才恢复 config，避免「别名已存在」等前置错误误删原文件。
+func rollbackPasswordChanges(configPath string, state passwordSetupState) {
+	if state.needsConfigRollback() {
+		_ = config.RollbackAfterAddFailure(configPath, state.bakPath, state.configExistedBefore, state.hostAppended)
+	}
+	if state.privPath != "" {
+		_ = keys.RemoveKeyPair(state.privPath)
+	}
+}
+
+// executePasswordFlow 供单测与 RunPasswordMode 执行完整编排；备份后的任一步失败则回滚本地更改。
 func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath string, deps passwordFlowDeps) (*WizardResult, string, error) {
 	setup, err := setupPasswordFlow(ctx, in, configPath, deps)
 	if err != nil {
+		rollbackPasswordChanges(configPath, setup)
 		return nil, setup.bakPath, err
 	}
 	if err := deployPublicKey(ctx, in, setup.pubLine, deps); err != nil {
-		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath)
+		rollbackPasswordChanges(configPath, setup)
+		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath, true)
 	}
 	return &WizardResult{
-		Alias:        in.Alias,
-		HostName:     in.HostName,
-		User:         in.User,
-		Port:         in.Port,
-		IdentityFile: setup.privPath,
-		BackupPath:   setup.bakPath,
+		Alias:                in.Alias,
+		HostName:             in.HostName,
+		User:                 in.User,
+		Port:                 in.Port,
+		IdentityFile:         setup.privPath,
+		BackupPath:           setup.bakPath,
+		PasswordFlowComplete: true,
 	}, setup.bakPath, nil
 }
 
 // formatPasswordDeployError 将底层 deploy 错误转为用户可读中文（保留 %w 供退出码映射）。
-func formatPasswordDeployError(err error, bakPath string) error {
+// rolledBack 为 true 时表示本地 config/密钥已回滚。
+func formatPasswordDeployError(err error, bakPath string, rolledBack bool) error {
+	if rolledBack {
+		if errors.Is(err, sshclient.ErrDeployAuthFailed) {
+			return fmt.Errorf("SSH 密码认证失败，已撤销本次对本地 config 与密钥的修改: %w", err)
+		}
+		return fmt.Errorf("部署公钥失败，已撤销本次对本地 config 与密钥的修改: %w", err)
+	}
 	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
 		if bakPath != "" {
 			return fmt.Errorf("SSH 密码认证失败（config 与密钥已写入，备份位于 %s）: %w",
@@ -217,6 +256,10 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 	if in.Port == "" {
 		in.Port = "22"
 	}
+	if err := validatePort(in.Port); err != nil {
+		return PasswordModeInput{}, err
+	}
+
 	if in.Alias == "" {
 		in.Alias = keys.SanitizeAlias(in.HostName)
 		if in.Alias == "" {
@@ -248,6 +291,11 @@ func nonEmpty(msg string) func(string) error {
 func ensureSSHDir(dir string) error {
 	// 0700：仅用户可访问，符合 OpenSSH 惯例。
 	return os.MkdirAll(dir, 0o700)
+}
+
+func configFileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // clearPassword 在返回前 best-effort 清零密码字符串（Go 字符串不可变，仅降低残留风险）。

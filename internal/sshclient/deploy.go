@@ -1,8 +1,8 @@
 package sshclient
 
 import (
+	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -31,6 +31,8 @@ type DeployOpts struct {
 // sshClient 抽象真实 SSH 客户端，便于单测注入。
 type sshClient interface {
 	RunSession(cmd string) (stdout, stderr string, exitCode int, err error)
+	// WriteAuthorizedKeys 通过会话 stdin 写入远端 ~/.ssh/authorized_keys（不依赖远端 base64）。
+	WriteAuthorizedKeys(content []byte) error
 	Close() error
 }
 
@@ -104,13 +106,7 @@ func deployOnce(ctx context.Context, opts DeployOpts) error {
 		return fmt.Errorf("%w: 读取 authorized_keys: %v", ErrDeployFailed, err)
 	}
 	newContent := appendAuthorizedKey(existing, opts.PublicLine)
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(newContent))
-	writeCmd := fmt.Sprintf(
-		`echo %s | base64 -d > ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`,
-		encoded,
-	)
-	if err := runRemote(client, writeCmd); err != nil {
+	if err := client.WriteAuthorizedKeys([]byte(newContent)); err != nil {
 		return fmt.Errorf("%w: 写入 authorized_keys: %v", ErrDeployFailed, err)
 	}
 	return nil
@@ -218,6 +214,23 @@ func defaultDialSSH(ctx context.Context, opts DeployOpts) (sshClient, error) {
 
 type realSSHClient struct {
 	client *ssh.Client
+}
+
+func (r *realSSHClient) WriteAuthorizedKeys(content []byte) error {
+	sess, err := r.client.NewSession()
+	if err != nil {
+		return err
+	}
+	defer sess.Close()
+
+	sess.Stdin = bytes.NewReader(content)
+	// 通过 stdin 喂给 cat；使用 $HOME 避免单引号内 ~ 不展开，且不依赖远端 base64。
+	cmd := `sh -c "mkdir -p \"$HOME/.ssh\" && chmod 700 \"$HOME/.ssh\" && cat > \"$HOME/.ssh/authorized_keys\" && chmod 600 \"$HOME/.ssh/authorized_keys\""`
+	runErr := sess.Run(cmd)
+	if runErr != nil {
+		return fmt.Errorf("write authorized_keys: %w", runErr)
+	}
+	return nil
 }
 
 func (r *realSSHClient) RunSession(cmd string) (stdout, stderr string, exitCode int, err error) {

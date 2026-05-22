@@ -129,6 +129,9 @@ func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, err
 	if in.Port == "" {
 		in.Port = "22"
 	}
+	if err := validatePort(in.Port); err != nil {
+		return KeyModeInput{}, err
+	}
 	if in.Alias == "" {
 		in.Alias = keys.SanitizeAlias(in.HostName)
 		if in.Alias == "" {

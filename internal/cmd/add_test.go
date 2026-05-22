@@ -157,8 +157,8 @@ func TestAdd_passwordMode_integrationSkipsSecondBackup(t *testing.T) {
 	if !strings.Contains(stdout.String(), "ssh pw-vps") {
 		t.Errorf("stdout = %q, want ssh hint", stdout.String())
 	}
-	if !strings.Contains(stderr.String(), "已备份 config") {
-		t.Errorf("stderr = %q, want backup notice", stderr.String())
+	if !strings.Contains(stderr.String(), "本次已完成") {
+		t.Errorf("stderr = %q, want success summary", stderr.String())
 	}
 	// 密码模式已在向导内写入，不应产生第二个备份文件。
 	matches, _ := filepath.Glob(filepath.Join(dir, "config.fuckssh.bak.*"))

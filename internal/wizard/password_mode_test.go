@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -144,20 +146,205 @@ func TestPasswordMode_reportsProgressSteps(t *testing.T) {
 	}
 }
 
-func TestFormatPasswordDeployError_authMessage(t *testing.T) {
+func TestFormatPasswordDeployError_authMessageRolledBack(t *testing.T) {
 	err := formatPasswordDeployError(
 		fmt.Errorf("%w: %w", sshclient.ErrDeployFailed, sshclient.ErrDeployAuthFailed),
 		"/tmp/config.bak",
+		true,
 	)
 	msg := err.Error()
 	if !strings.Contains(msg, "SSH 密码认证失败") {
 		t.Errorf("message = %q, want auth hint", msg)
 	}
-	if !strings.Contains(msg, "/tmp/config.bak") {
-		t.Errorf("message = %q, want backup path", msg)
+	if !strings.Contains(msg, "已撤销") {
+		t.Errorf("message = %q, want rollback hint", msg)
 	}
 	if !errors.Is(err, sshclient.ErrDeployAuthFailed) {
 		t.Errorf("error should wrap ErrDeployAuthFailed: %v", err)
+	}
+}
+
+func TestPasswordMode_duplicateAliasPreservesConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	orig := "Host dup\n    HostName 1.2.3.4\n    User root\n    IdentityFile /tmp/k\n"
+	if err := os.WriteFile(cfg, []byte(orig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	deps := passwordFlowDeps{
+		backup:     func(string) (string, error) { t.Fatal("backup should not run"); return "", nil },
+		writeKeys:  func(string, string) (string, string, error) { return "", "", nil },
+		appendHost: func(string, config.HostEntry) error { return nil },
+		deploy:     func(context.Context, sshclient.DeployOpts) error { return nil },
+	}
+	in, err := finalizePasswordModeInput(PasswordModeInput{
+		HostName: "203.0.113.50",
+		User:     "ubuntu",
+		Password: "pw",
+		Alias:    "dup",
+	})
+	if err != nil {
+		t.Fatalf("finalize: %v", err)
+	}
+
+	_, _, err = executePasswordFlow(context.Background(), in, cfg, deps)
+	if err == nil {
+		t.Fatal("expected duplicate alias error")
+	}
+	if !errors.Is(err, config.ErrHostExists) {
+		t.Errorf("error = %v, want ErrHostExists", err)
+	}
+
+	got, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != orig {
+		t.Errorf("config was modified on duplicate error:\n%s", got)
+	}
+}
+
+func TestPasswordMode_rollbackAfterKeysFailure(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	orig := "Host old\n    HostName 10.0.0.1\n    User root\n    IdentityFile /tmp/old\n"
+	if err := os.WriteFile(cfg, []byte(orig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	deps := passwordFlowDeps{
+		backup: config.Backup,
+		writeKeys: func(string, string) (string, string, error) {
+			return "", "", errors.New("key write failed")
+		},
+		appendHost: func(string, config.HostEntry) error { return nil },
+		deploy:     func(context.Context, sshclient.DeployOpts) error { return nil },
+	}
+	in, err := finalizePasswordModeInput(PasswordModeInput{
+		HostName: "203.0.113.50",
+		User:     "ubuntu",
+		Password: "pw",
+		Alias:    "new-vps",
+	})
+	if err != nil {
+		t.Fatalf("finalize: %v", err)
+	}
+
+	_, _, err = executePasswordFlow(context.Background(), in, cfg, deps)
+	if err == nil {
+		t.Fatal("expected key error")
+	}
+
+	got, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != orig {
+		t.Errorf("config should be restored from backup, got:\n%s", got)
+	}
+}
+
+func TestPasswordMode_rejectsDuplicateAliasBeforeSideEffects(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	content := "Host dup\n    HostName 1.2.3.4\n    User root\n    IdentityFile /tmp/k\n"
+	if err := os.WriteFile(cfg, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var wroteKeys bool
+	deps := passwordFlowDeps{
+		backup: func(string) (string, error) {
+			t.Fatal("backup should not run when alias exists")
+			return "", nil
+		},
+		writeKeys: func(string, string) (string, string, error) {
+			wroteKeys = true
+			return "", "", nil
+		},
+		appendHost: func(string, config.HostEntry) error { return nil },
+		deploy:     func(context.Context, sshclient.DeployOpts) error { return nil },
+	}
+
+	in, err := finalizePasswordModeInput(PasswordModeInput{
+		HostName: "203.0.113.50",
+		User:     "ubuntu",
+		Password: "pw",
+		Alias:    "dup",
+	})
+	if err != nil {
+		t.Fatalf("finalize: %v", err)
+	}
+
+	_, _, err = executePasswordFlow(context.Background(), in, cfg, deps)
+	if err == nil {
+		t.Fatal("expected duplicate alias error")
+	}
+	if !errors.Is(err, config.ErrHostExists) {
+		t.Errorf("error = %v, want ErrHostExists", err)
+	}
+	if wroteKeys {
+		t.Error("keys should not be written")
+	}
+}
+
+func TestPasswordMode_rollbackOnDeployFailure(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	orig := "Host old\n    HostName 10.0.0.1\n    User root\n    IdentityFile /tmp/old\n"
+	if err := os.WriteFile(cfg, []byte(orig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	sshDir := filepath.Join(dir, ".ssh")
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	deps := passwordFlowDeps{
+		backup: config.Backup,
+		writeKeys: func(dir, alias string) (string, string, error) {
+			priv := filepath.Join(dir, "id_ed25519_fuckssh_test")
+			if err := os.WriteFile(priv, []byte("priv"), 0o600); err != nil {
+				return "", "", err
+			}
+			if err := os.WriteFile(priv+".pub", []byte("pub\n"), 0o644); err != nil {
+				return "", "", err
+			}
+			return priv, "ssh-ed25519 AAAATEST\n", nil
+		},
+		appendHost: config.AppendHost,
+		deploy: func(context.Context, sshclient.DeployOpts) error {
+			return sshclient.ErrDeployFailed
+		},
+	}
+
+	in, err := finalizePasswordModeInput(PasswordModeInput{
+		HostName: "203.0.113.50",
+		User:     "ubuntu",
+		Password: "pw",
+		Alias:    "new-vps",
+	})
+	if err != nil {
+		t.Fatalf("finalize: %v", err)
+	}
+
+	_, _, err = executePasswordFlow(context.Background(), in, cfg, deps)
+	if err == nil {
+		t.Fatal("expected deploy error")
+	}
+
+	got, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != orig {
+		t.Errorf("config changed after rollback:\n%s", got)
+	}
+	priv := filepath.Join(sshDir, "id_ed25519_fuckssh_new_vps")
+	if _, err := os.Stat(priv); !os.IsNotExist(err) {
+		t.Errorf("priv key should be removed, err=%v", err)
 	}
 }
 

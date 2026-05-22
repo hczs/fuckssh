@@ -131,9 +131,7 @@ func connectionTestFailureMessage(err error) string {
 		return "用户名或密码不正确，请重新输入"
 	}
 	msg := err.Error()
-	for _, prefix := range []string{"sshclient: deploy failed: ", "sshclient: deploy failed: "} {
-		msg = strings.TrimPrefix(msg, prefix)
-	}
+	msg = strings.TrimPrefix(msg, "sshclient: deploy failed: ")
 	return msg
 }
 
