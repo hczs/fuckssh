@@ -62,6 +62,50 @@ func TestDeployPublicKey_authFailed_returnsTypedError(t *testing.T) {
 	}
 }
 
+func TestTestPasswordAuth_authFailed_returnsTypedError(t *testing.T) {
+	prev := dialSSH
+	defer func() { dialSSH = prev }()
+
+	dialSSH = func(ctx context.Context, opts DeployOpts) (sshClient, error) {
+		return nil, errors.New("ssh: unable to authenticate, attempted methods [none password]")
+	}
+
+	err := TestPasswordAuth(context.Background(), DeployOpts{
+		Host:     "203.0.113.1",
+		Port:     "22",
+		User:     "root",
+		Password: "wrong",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrDeployAuthFailed) {
+		t.Errorf("error = %v, want ErrDeployAuthFailed", err)
+	}
+}
+
+func TestTestPasswordAuth_success_closesClient(t *testing.T) {
+	prev := dialSSH
+	defer func() { dialSSH = prev }()
+
+	dialSSH = func(ctx context.Context, opts DeployOpts) (sshClient, error) {
+		return &fakeSSHClient{}, nil
+	}
+
+	if err := TestPasswordAuth(context.Background(), DeployOpts{
+		Host: "203.0.113.1", Port: "22", User: "root", Password: "ok",
+	}); err != nil {
+		t.Fatalf("TestPasswordAuth: %v", err)
+	}
+}
+
+type fakeSSHClient struct{}
+
+func (f *fakeSSHClient) RunSession(cmd string) (string, string, int, error) {
+	return "", "", 0, nil
+}
+func (f *fakeSSHClient) Close() error { return nil }
+
 func TestIsAuthError(t *testing.T) {
 	if !isAuthError(errors.New("ssh: unable to authenticate")) {
 		t.Error("want auth error")

@@ -39,6 +39,21 @@ var dialSSH = defaultDialSSH
 
 const deployMaxAttempts = 3 // 首次 + 最多 2 次重试
 
+// TestPasswordAuth 仅验证能否用密码建立 SSH 连接（向导填完密码后「测试连接」用）。
+func TestPasswordAuth(ctx context.Context, opts DeployOpts) error {
+	if strings.TrimSpace(opts.Host) == "" || strings.TrimSpace(opts.User) == "" {
+		return fmt.Errorf("%w: Host 与 User 不能为空", ErrDeployFailed)
+	}
+	if strings.TrimSpace(opts.Password) == "" {
+		return fmt.Errorf("%w: 密码不能为空", ErrDeployFailed)
+	}
+	client, err := dialSSH(ctx, opts)
+	if err != nil {
+		return classifyDialError(err)
+	}
+	return client.Close()
+}
+
 // DeployPublicKey 使用密码登录远端，确保 ~/.ssh 存在并将公钥追加到 authorized_keys。
 //
 // MVP 使用 InsecureIgnoreHostKey，生产环境应加强 host key 校验（见架构待办）。

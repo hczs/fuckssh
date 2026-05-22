@@ -20,6 +20,14 @@ func TestExitCode_deployFailed(t *testing.T) {
 	}
 }
 
+func TestExitCode_deployAuthFailed(t *testing.T) {
+	err := fmt.Errorf("SSH 密码认证失败: %w",
+		fmt.Errorf("%w: %w", sshclient.ErrDeployFailed, sshclient.ErrDeployAuthFailed))
+	if got := ExitCode(err); got != 4 {
+		t.Errorf("auth deploy failed = %d, want 4", got)
+	}
+}
+
 func TestAddCmd_warnsWhenSSHMissing(t *testing.T) {
 	restoreSSH := stubCheckSSH(func() (string, error) {
 		return "", sshclient.ErrSSHNotFound

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/config"
 	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/platform"
@@ -38,38 +37,14 @@ type passwordFlowDeps struct {
 	writeKeys  func(sshDir, alias string) (privPath, pubLine string, err error)
 	appendHost func(configPath string, entry config.HostEntry) error
 	deploy     func(ctx context.Context, opts sshclient.DeployOpts) error
+	onProgress func(msg string)
 }
 
-// RunPasswordMode 通过 huh 收集密码模式字段并执行完整编排。
+// RunPasswordMode 通过 huh 逐项收集密码模式字段并执行完整编排。
 // configPath 为 ssh config 路径（与 cmd --config 一致）。
 func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, string, error) {
-	var in PasswordModeInput
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("服务器 IP 或域名").
-				Value(&in.HostName).
-				Validate(nonEmpty("不能为空")),
-			huh.NewInput().
-				Title("SSH 用户名").
-				Value(&in.User).
-				Validate(nonEmpty("不能为空")),
-			huh.NewInput().
-				Title("SSH 密码").
-				EchoMode(huh.EchoModePassword).
-				Value(&in.Password).
-				Validate(nonEmpty("不能为空")),
-			huh.NewInput().
-				Title("SSH 端口").
-				Placeholder("22").
-				Value(&in.Port),
-			huh.NewInput().
-				Title("Host 别名").
-				Description("回车则根据 IP/域名自动生成").
-				Value(&in.Alias),
-		),
-	)
-	if err := form.Run(); err != nil {
+	in, err := collectPasswordModeInput(ctx, nil)
+	if err != nil {
 		return nil, "", err
 	}
 	defer clearPassword(&in.Password)
@@ -87,7 +62,24 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 		return nil, "", err
 	}
 
-	return executePasswordFlow(ctx, final, configPath, defaultPasswordFlowDeps(sshDir))
+	deps := defaultPasswordFlowDeps(sshDir)
+	setup, err := setupPasswordFlow(ctx, final, configPath, deps)
+	if err != nil {
+		return nil, setup.bakPath, err
+	}
+
+	if err := deployPublicKey(ctx, final, setup.pubLine, deps); err != nil {
+		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath)
+	}
+
+	return &WizardResult{
+		Alias:        final.Alias,
+		HostName:     final.HostName,
+		User:         final.User,
+		Port:         final.Port,
+		IdentityFile: setup.privPath,
+		BackupPath:   setup.bakPath,
+	}, setup.bakPath, nil
 }
 
 func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
@@ -106,29 +98,44 @@ func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
 		},
 		appendHost: config.AppendHost,
 		deploy:     sshclient.DeployPublicKey,
+		onProgress: reportProgress,
 	}
 }
 
-// executePasswordFlow 按顺序：备份 config → 生成密钥 → 追加 Host → 部署公钥。
-func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath string, deps passwordFlowDeps) (*WizardResult, string, error) {
+type passwordSetupState struct {
+	privPath string
+	pubLine  string
+	bakPath  string
+}
+
+// setupPasswordFlow 按顺序：备份 config → 生成密钥 → 追加 Host（部署在后续步骤）。
+func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath string, deps passwordFlowDeps) (passwordSetupState, error) {
+	progress := deps.onProgress
+	if progress == nil {
+		progress = func(string) {}
+	}
+
+	progress("正在备份 SSH config…")
 	bakPath, err := deps.backup(configPath)
 	if err != nil {
-		return nil, "", err
+		return passwordSetupState{}, err
 	}
 
 	sshDir, err := platform.SSHDir()
 	if err != nil {
-		return nil, bakPath, err
+		return passwordSetupState{bakPath: bakPath}, err
 	}
 	if err := ensureSSHDir(sshDir); err != nil {
-		return nil, bakPath, err
+		return passwordSetupState{bakPath: bakPath}, err
 	}
 
+	progress("正在生成 Ed25519 密钥…")
 	privPath, pubLine, err := deps.writeKeys(sshDir, in.Alias)
 	if err != nil {
-		return nil, bakPath, err
+		return passwordSetupState{bakPath: bakPath}, err
 	}
 
+	progress("正在写入 SSH config…")
 	entry := config.HostEntry{
 		Alias:        in.Alias,
 		HostName:     in.HostName,
@@ -137,31 +144,59 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 		IdentityFile: privPath,
 	}
 	if err := deps.appendHost(configPath, entry); err != nil {
-		return nil, bakPath, err
+		return passwordSetupState{bakPath: bakPath}, err
 	}
+	_ = ctx
+	return passwordSetupState{privPath: privPath, pubLine: pubLine, bakPath: bakPath}, nil
+}
 
-	deployOpts := sshclient.DeployOpts{
+func deployPublicKey(ctx context.Context, in PasswordModeInput, pubLine string, deps passwordFlowDeps) error {
+	progress := deps.onProgress
+	if progress == nil {
+		progress = func(string) {}
+	}
+	progress("正在连接服务器并部署公钥…")
+	return deps.deploy(ctx, sshclient.DeployOpts{
 		Host:       in.HostName,
 		Port:       in.Port,
 		User:       in.User,
 		Password:   in.Password,
 		PublicLine: pubLine,
-	}
-	if err := deps.deploy(ctx, deployOpts); err != nil {
-		if bakPath != "" {
-			return nil, bakPath, fmt.Errorf("%w（已备份 config 至 %s）", err, bakPath)
-		}
-		return nil, bakPath, err
-	}
+	})
+}
 
+// executePasswordFlow 供单测验证完整编排顺序（备份 → 密钥 → config → 部署）。
+func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath string, deps passwordFlowDeps) (*WizardResult, string, error) {
+	setup, err := setupPasswordFlow(ctx, in, configPath, deps)
+	if err != nil {
+		return nil, setup.bakPath, err
+	}
+	if err := deployPublicKey(ctx, in, setup.pubLine, deps); err != nil {
+		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath)
+	}
 	return &WizardResult{
 		Alias:        in.Alias,
 		HostName:     in.HostName,
 		User:         in.User,
 		Port:         in.Port,
-		IdentityFile: privPath,
-		BackupPath:   bakPath,
-	}, bakPath, nil
+		IdentityFile: setup.privPath,
+		BackupPath:   setup.bakPath,
+	}, setup.bakPath, nil
+}
+
+// formatPasswordDeployError 将底层 deploy 错误转为用户可读中文（保留 %w 供退出码映射）。
+func formatPasswordDeployError(err error, bakPath string) error {
+	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
+		if bakPath != "" {
+			return fmt.Errorf("SSH 密码认证失败（config 与密钥已写入，备份位于 %s）: %w",
+				bakPath, err)
+		}
+		return fmt.Errorf("SSH 密码认证失败: %w", err)
+	}
+	if bakPath != "" {
+		return fmt.Errorf("部署公钥失败（config 已备份至 %s）: %w", bakPath, err)
+	}
+	return fmt.Errorf("部署公钥失败: %w", err)
 }
 
 // finalizePasswordModeInput 校验并补全默认值。
