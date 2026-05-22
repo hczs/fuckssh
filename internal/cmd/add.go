@@ -15,7 +15,7 @@ import (
 // checkSSHFn 可在测试中注入，默认调用 sshclient.CheckSSH。
 var checkSSHFn = sshclient.CheckSSH
 
-// runWizardFn 可在测试中注入，默认调用交互式向导。
+// runWizardFn 可在测试中注入，默认调用交互式向导（传入 config 路径）。
 var runWizardFn = wizard.Run
 
 var addCmd = &cobra.Command{
@@ -32,11 +32,6 @@ func runAdd(stdout, stderr io.Writer) error {
 		return err
 	}
 
-	result, err := runWizardFn()
-	if err != nil {
-		return err
-	}
-
 	configPath, err := ConfigFilePath()
 	if err != nil {
 		return err
@@ -44,6 +39,16 @@ func runAdd(stdout, stderr io.Writer) error {
 
 	if err := os.MkdirAll(dirOf(configPath), 0o700); err != nil {
 		return &os.PathError{Op: "mkdir", Path: dirOf(configPath), Err: err}
+	}
+
+	result, err := runWizardFn(configPath)
+	if err != nil {
+		return err
+	}
+
+	if result.PasswordFlowComplete {
+		printAddSuccess(stdout, stderr, configPath, result)
+		return nil
 	}
 
 	bakPath, err := config.Backup(configPath)
@@ -65,9 +70,16 @@ func runAdd(stdout, stderr io.Writer) error {
 		return err
 	}
 
+	printAddSuccess(stdout, stderr, configPath, result)
+	return nil
+}
+
+func printAddSuccess(stdout, stderr io.Writer, configPath string, result *wizard.WizardResult) {
+	if result.BackupPath != "" {
+		fmt.Fprintf(stderr, "已备份 config 至 %s\n", result.BackupPath)
+	}
 	fmt.Fprintf(stdout, "配置已写入 %s\n", configPath)
 	fmt.Fprintf(stdout, "现在可以执行: ssh %s\n", result.Alias)
-	return nil
 }
 
 // warnIfSSHMissing 检测系统 ssh；缺失时打印指引但不阻止后续流程。

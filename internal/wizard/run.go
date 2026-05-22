@@ -38,12 +38,13 @@ func Run(configPath string) (*WizardResult, error) {
 	case ModeKey:
 		return RunKeyMode()
 	case ModePassword:
-		result, _, err := RunPasswordMode(context.Background(), configPath)
+		result, bakPath, err := RunPasswordMode(context.Background(), configPath)
 		if err != nil {
 			return nil, err
 		}
 		if result != nil {
 			result.PasswordFlowComplete = true
+			result.BackupPath = bakPath
 		}
 		return result, nil
 	default:

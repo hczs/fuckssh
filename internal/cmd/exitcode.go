@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/fuckssh/fuckssh/internal/config"
+	"github.com/fuckssh/fuckssh/internal/sshclient"
 	"github.com/fuckssh/fuckssh/internal/wizard"
 )
 
@@ -12,6 +13,9 @@ import (
 func ExitCode(err error) int {
 	if err == nil {
 		return 0
+	}
+	if errors.Is(err, sshclient.ErrDeployFailed) {
+		return 4
 	}
 	if errors.Is(err, wizard.ErrInvalidInput) || errors.Is(err, config.ErrHostExists) {
 		return 1

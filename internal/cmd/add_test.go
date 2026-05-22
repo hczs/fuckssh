@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,12 +13,19 @@ import (
 	"github.com/fuckssh/fuckssh/internal/wizard"
 )
 
+func TestExitCode_deployFailed(t *testing.T) {
+	err := fmt.Errorf("deploy: %w", sshclient.ErrDeployFailed)
+	if got := ExitCode(err); got != 4 {
+		t.Errorf("deploy failed = %d, want 4", got)
+	}
+}
+
 func TestAddCmd_warnsWhenSSHMissing(t *testing.T) {
 	restoreSSH := stubCheckSSH(func() (string, error) {
 		return "", sshclient.ErrSSHNotFound
 	})
 	defer restoreSSH()
-	restoreWizard := stubRunWizard(func() (*wizard.WizardResult, error) {
+	restoreWizard := stubRunWizard(func(string) (*wizard.WizardResult, error) {
 		return nil, wizard.ErrInvalidInput
 	})
 	defer restoreWizard()
@@ -38,7 +46,7 @@ func TestAddCmd_noWarningWhenSSHPresent(t *testing.T) {
 		return "/usr/bin/ssh", nil
 	})
 	defer restoreSSH()
-	restoreWizard := stubRunWizard(func() (*wizard.WizardResult, error) {
+	restoreWizard := stubRunWizard(func(string) (*wizard.WizardResult, error) {
 		return nil, wizard.ErrInvalidInput
 	})
 	defer restoreWizard()
@@ -66,7 +74,7 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 		return "/usr/bin/ssh", nil
 	})
 	defer restoreSSH()
-	restoreWizard := stubRunWizard(func() (*wizard.WizardResult, error) {
+	restoreWizard := stubRunWizard(func(string) (*wizard.WizardResult, error) {
 		return &wizard.WizardResult{
 			Alias:        "test-vps",
 			HostName:     "203.0.113.50",
@@ -107,6 +115,50 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 	}
 }
 
+func TestAdd_passwordMode_integrationSkipsSecondBackup(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	key := filepath.Join(dir, "id_ed25519_fuckssh_pw")
+
+	restoreSSH := stubCheckSSH(func() (string, error) {
+		return "/usr/bin/ssh", nil
+	})
+	defer restoreSSH()
+	restoreWizard := stubRunWizard(func(string) (*wizard.WizardResult, error) {
+		return &wizard.WizardResult{
+			Alias:                "pw-vps",
+			HostName:             "203.0.113.60",
+			User:                 "root",
+			Port:                 "22",
+			IdentityFile:         key,
+			PasswordFlowComplete: true,
+			BackupPath:           cfg + ".fuckssh.bak.test",
+		}, nil
+	})
+	defer restoreWizard()
+
+	var stdout, stderr bytes.Buffer
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+	rootCmd.SetArgs([]string{"add", "--config", cfg})
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	if !strings.Contains(stdout.String(), "ssh pw-vps") {
+		t.Errorf("stdout = %q, want ssh hint", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "已备份 config") {
+		t.Errorf("stderr = %q, want backup notice", stderr.String())
+	}
+	// 密码模式已在向导内写入，不应产生第二个备份文件。
+	matches, _ := filepath.Glob(filepath.Join(dir, "config.fuckssh.bak.*"))
+	if len(matches) > 0 {
+		t.Errorf("unexpected extra backup files: %v", matches)
+	}
+}
+
 func TestExitCode_mapping(t *testing.T) {
 	if got := ExitCode(wizard.ErrInvalidInput); got != 1 {
 		t.Errorf("invalid input = %d, want 1", got)
@@ -130,7 +182,7 @@ func stubCheckSSH(fn func() (string, error)) func() {
 	return func() { checkSSHFn = prev }
 }
 
-func stubRunWizard(fn func() (*wizard.WizardResult, error)) func() {
+func stubRunWizard(fn func(string) (*wizard.WizardResult, error)) func() {
 	prev := runWizardFn
 	runWizardFn = fn
 	return func() { runWizardFn = prev }

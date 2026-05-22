@@ -160,6 +160,7 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 		User:         in.User,
 		Port:         in.Port,
 		IdentityFile: privPath,
+		BackupPath:   bakPath,
 	}, bakPath, nil
 }
 

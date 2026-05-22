@@ -32,6 +32,8 @@ type WizardResult struct {
 	IdentityFile string
 	// PasswordFlowComplete 为 true 时表示密码模式已在向导内完成备份、写 config 与部署。
 	PasswordFlowComplete bool
+	// BackupPath 为密码模式备份的 config 路径（成功时供提示；失败时错误信息亦会包含）。
+	BackupPath string
 }
 
 type fileStatFunc func(name string) (os.FileInfo, error)

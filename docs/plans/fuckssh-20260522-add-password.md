@@ -4,7 +4,7 @@
 
 - [x] Task 1: sshclient 包 — 密码登录并部署 authorized_keys
 - [x] Task 2: wizard 包 — 密码模式表单与编排
-- [ ] Task 3: add 子命令 — 密码模式端到端（密钥生成 + 部署 + config）
+- [x] Task 3: add 子命令 — 密码模式端到端（密钥生成 + 部署 + config）
 
 > 从第一个 `[ ]` 开始执行。完成后将 `[ ]` 改为 `[x]`。
 
