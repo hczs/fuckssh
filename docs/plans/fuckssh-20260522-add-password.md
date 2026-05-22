@@ -2,7 +2,7 @@
 
 ## 当前进度
 
-- [ ] Task 1: sshclient 包 — 密码登录并部署 authorized_keys
+- [x] Task 1: sshclient 包 — 密码登录并部署 authorized_keys
 - [ ] Task 2: wizard 包 — 密码模式表单与编排
 - [ ] Task 3: add 子命令 — 密码模式端到端（密钥生成 + 部署 + config）
 
