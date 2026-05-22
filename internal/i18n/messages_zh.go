@@ -14,6 +14,7 @@ var messagesZH = map[string]string{
 	KeySearchShort: "按别名、地址或 IP 搜索 Host",
 	KeySearchLong:  "在别名、HostName、IP 中进行关键词匹配。",
 	KeyConfigFlag:  "ssh config 文件路径（默认 ~/.ssh/config）",
+	KeyCmdElapsedMs: "执行耗时 %d ms\n",
 
 	KeySSHMissingWarning: "错误: 未在 PATH 中找到 ssh 客户端，请先安装 OpenSSH 后再运行 fuckssh add。",
 

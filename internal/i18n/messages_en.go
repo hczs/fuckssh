@@ -14,6 +14,7 @@ var messagesEN = map[string]string{
 	KeySearchShort: "Search hosts by alias, hostname, or IP",
 	KeySearchLong:  "Match hosts by alias, HostName, or IP substring.",
 	KeyConfigFlag:  "path to ssh config file (default: ~/.ssh/config)",
+	KeyCmdElapsedMs: "Elapsed: %d ms\n",
 
 	KeySSHMissingWarning: "Error: ssh client not found in PATH. Install OpenSSH before running fuckssh add.",
 

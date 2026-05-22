@@ -15,6 +15,7 @@ const (
 	KeySearchShort = "cmd.search.short"
 	KeySearchLong  = "cmd.search.long"
 	KeyConfigFlag  = "cmd.config_flag"
+	KeyCmdElapsedMs = "cmd.elapsed_ms"
 
 	KeySSHMissingWarning = "ssh.missing_warning"
 

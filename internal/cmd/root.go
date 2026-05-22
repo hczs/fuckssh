@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"sync"
+	"time"
 
 	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/platform"
@@ -22,7 +23,18 @@ var (
 
 // Execute runs the root command.
 func Execute() error {
-	return rootCmd.Execute()
+	runArgs := commandArgs(rootCmd)
+	// 清除上一轮测试或命令残留的 help.Changed，避免误判；本轮参数已保存在 runArgs。
+	resetHelpFlags(rootCmd)
+	skipCmdElapsed = false
+	start := time.Now()
+	err := rootCmd.Execute()
+	if !helpInArgs(runArgs) {
+		printCmdElapsed(rootCmd.ErrOrStderr(), time.Since(start))
+	}
+	resetHelpFlags(rootCmd)
+	clearCommandArgs(rootCmd)
+	return err
 }
 
 // ConfigFilePath 返回当前应读取的 ssh config 路径（优先 --config）。
@@ -43,7 +55,10 @@ func init() {
 }
 
 func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
-	if cmd.Flags().Changed("help") {
+	runArgs := commandArgs(rootCmd)
+	help := cmd.Flags().Changed("help") && helpInArgs(runArgs)
+	skipCmdElapsed = help
+	if help {
 		_, _ = i18n.Load()
 		applyLocalizedHelp()
 		return nil
