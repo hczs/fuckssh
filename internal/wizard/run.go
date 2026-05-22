@@ -1,8 +1,8 @@
 package wizard
 
 import (
+	"context"
 	"errors"
-	"fmt"
 
 	"github.com/charmbracelet/huh"
 )
@@ -16,7 +16,8 @@ const (
 )
 
 // Run 编排 add 向导：选择模式后进入对应流程。
-func Run() (*WizardResult, error) {
+// configPath 写入密码模式使用的 ssh config（密钥模式由 cmd 层追加）。
+func Run(configPath string) (*WizardResult, error) {
 	var mode ConnectionMode
 	form := huh.NewForm(
 		huh.NewGroup(
@@ -37,7 +38,14 @@ func Run() (*WizardResult, error) {
 	case ModeKey:
 		return RunKeyMode()
 	case ModePassword:
-		return nil, fmt.Errorf("%w: 密码连接模式将在后续版本提供", ErrInvalidInput)
+		result, _, err := RunPasswordMode(context.Background(), configPath)
+		if err != nil {
+			return nil, err
+		}
+		if result != nil {
+			result.PasswordFlowComplete = true
+		}
+		return result, nil
 	default:
 		return nil, errors.New("wizard: 未知连接方式")
 	}

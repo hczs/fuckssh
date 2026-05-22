@@ -30,6 +30,8 @@ type WizardResult struct {
 	User         string
 	Port         string
 	IdentityFile string
+	// PasswordFlowComplete 为 true 时表示密码模式已在向导内完成备份、写 config 与部署。
+	PasswordFlowComplete bool
 }
 
 type fileStatFunc func(name string) (os.FileInfo, error)
