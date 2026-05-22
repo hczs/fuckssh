@@ -14,11 +14,11 @@
 
 ## 验收标准
 
-- [ ] 生成后私钥为 `OPENSSH PRIVATE KEY` 格式，`ssh-keygen -l -f <私钥>` 能读取
-- [ ] 公钥单行格式可用于 `authorized_keys`
-- [ ] Unix 上私钥权限为 `0600`
-- [ ] 目标路径已存在时返回明确错误（不静默覆盖）
-- [ ] `go test ./internal/keys/...` 全部通过
+- [x] 生成后私钥为 `OPENSSH PRIVATE KEY` 格式，`ssh-keygen -l -f <私钥>` 能读取
+- [x] 公钥单行格式可用于 `authorized_keys`
+- [x] Unix 上私钥权限为 `0600`
+- [x] 目标路径已存在时返回明确错误（不静默覆盖）
+- [x] `go test ./internal/keys/...` 全部通过
 
 ## 完成条件
 
