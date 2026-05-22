@@ -3,7 +3,7 @@
 ## 当前进度
 
 - [x] Task 1: platform 包 — SSH 目录路径解析
-- [ ] Task 2: config 包 — 受限解析器与 HostEntry 模型
+- [x] Task 2: config 包 — 受限解析器与 HostEntry 模型
 - [ ] Task 3: list 子命令 — 表格输出
 - [ ] Task 4: search 子命令 — 模糊匹配
 
