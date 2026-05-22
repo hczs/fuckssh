@@ -2,8 +2,8 @@
 
 ## 当前进度
 
-- [ ] Task 1: keys 包 — 生成密钥对（OpenSSH 格式）
-- [ ] Task 2: keys 包 — 写入文件与权限（platform 协作）
+- [x] Task 1: keys 包 — 生成密钥对（OpenSSH 格式）
+- [x] Task 2: keys 包 — 写入文件与权限（platform 协作）
 - [ ] Task 3: 密钥文件命名规则与冲突处理
 
 > 从第一个 `[ ]` 开始执行。完成后将 `[ ]` 改为 `[x]`。
