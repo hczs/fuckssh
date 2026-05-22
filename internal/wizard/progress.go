@@ -26,3 +26,11 @@ func reportProgressStep(step, total int, msg string) {
 	}
 	fmt.Fprintf(progressOut, "%s\n", i18n.T(i18n.KeyWizardProgressStep, step, total, msg))
 }
+
+// ReportProgressStep 供 cmd 等包在确认后输出与密码模式一致的执行进度。
+func ReportProgressStep(step, total int, msg string) {
+	reportProgressStep(step, total, msg)
+}
+
+// KeyFlowProgressTotal 为密钥模式确认后的本地写盘步骤数。
+const KeyFlowProgressTotal = 3

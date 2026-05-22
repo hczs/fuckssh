@@ -15,7 +15,7 @@ import (
 type passwordAuthTestFn func(ctx context.Context, in PasswordModeInput) error
 
 // collectPasswordModeInput 用单个堆叠表单逐项收集；draft 非空时预填并恢复可见步骤（确认页返回修改时用）。
-func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn, draft *PasswordModeInput) (PasswordModeInput, error) {
+func collectPasswordModeInput(ctx context.Context, configPath string, testAuth passwordAuthTestFn, draft *PasswordModeInput) (PasswordModeInput, error) {
 	if testAuth == nil {
 		testAuth = defaultPasswordAuthTest
 	}
@@ -31,6 +31,7 @@ func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn, 
 		huh.NewGroup(
 			huh.NewInput().
 				Title(stepTitle(2, i18n.KeyWizardHostIP)).
+				Description(firstFieldDescription("")).
 				Value(&in.HostName).
 				Validate(func(s string) error {
 					if err := nonEmpty(emptyMsg)(s); err != nil {
@@ -46,7 +47,10 @@ func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn, 
 				Description(i18n.T(i18n.KeyWizardPortDesc)).
 				Placeholder("22").
 				Value(&in.Port).
-				Validate(func(string) error {
+				Validate(func(s string) error {
+					if err := validatePort(s); err != nil {
+						return err
+					}
 					reveal.showThrough(2)
 					return nil
 				}),
@@ -77,7 +81,8 @@ func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn, 
 			huh.NewInput().
 				Title(stepTitle(6, i18n.KeyWizardAlias)).
 				DescriptionFunc(func() string { return aliasDescription(&in.HostName) }, &in.HostName).
-				Value(&in.Alias),
+				Value(&in.Alias).
+				Validate(aliasFieldValidate(configPath, &in.HostName)),
 		).WithHideFunc(hideUntilRevealed(4, reveal)),
 	).WithLayout(huh.LayoutStack).WithShowErrors(false)
 
@@ -105,22 +110,4 @@ func testPasswordConnection(ctx context.Context, in *PasswordModeInput, password
 	start := time.Now()
 	err := testAuth(ctx, *in)
 	return time.Since(start), err
-}
-
-// passwordConnectionValidate 保留供单测验证测连与错误文案。
-func passwordConnectionValidate(ctx context.Context, in *PasswordModeInput, testAuth passwordAuthTestFn, _ *connFeedback) func(string) error {
-	return func(password string) error {
-		_, err := testPasswordConnection(ctx, in, password, testAuth)
-		if err != nil {
-			return errors.New(connectionTestFailureMessage(err))
-		}
-		return nil
-	}
-}
-
-func effectivePort(port string) string {
-	if strings.TrimSpace(port) == "" {
-		return "22"
-	}
-	return strings.TrimSpace(port)
 }

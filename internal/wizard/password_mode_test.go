@@ -134,7 +134,7 @@ func TestPasswordMode_reportsProgressSteps(t *testing.T) {
 		"正在备份 SSH config…",
 		"正在生成 Ed25519 密钥…",
 		"正在写入 SSH config…",
-		"正在连接服务器并部署公钥…",
+		"正在写入公钥到服务器…",
 	}
 	if len(steps) != len(want) {
 		t.Fatalf("progress steps = %v, want %v", steps, want)
@@ -419,25 +419,23 @@ func TestPasswordConnectionValidate_retriesUntilSuccess(t *testing.T) {
 		User:     "ubuntu",
 		Port:     "22",
 	}
-	var feedback connFeedback
-	feedback.setIdleHint()
-	validate := passwordConnectionValidate(context.Background(), &in, func(ctx context.Context, got PasswordModeInput) error {
+	testAuth := func(ctx context.Context, got PasswordModeInput) error {
 		attempts++
 		if attempts < 2 {
 			return authErr
 		}
 		return nil
-	}, &feedback)
+	}
 
-	err := validate("wrong")
+	_, err := testPasswordConnection(context.Background(), &in, "wrong", testAuth)
 	if err == nil {
 		t.Fatal("expected error for wrong password")
 	}
-	if !strings.Contains(err.Error(), "密码") && !strings.Contains(err.Error(), "连接") {
-		t.Errorf("error = %q, want friendly hint", err.Error())
+	if msg := connectionTestFailureMessage(err); !strings.Contains(msg, "密码") && !strings.Contains(msg, "连接") {
+		t.Errorf("message = %q, want friendly hint", msg)
 	}
-	if err := validate("correct"); err != nil {
-		t.Fatalf("validate correct password: %v", err)
+	if _, err := testPasswordConnection(context.Background(), &in, "correct", testAuth); err != nil {
+		t.Fatalf("correct password: %v", err)
 	}
 	if attempts != 2 {
 		t.Errorf("attempts = %d, want 2", attempts)

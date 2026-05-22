@@ -35,4 +35,7 @@ func TestBuildPasswordConfirmSummary_noMangledPath(t *testing.T) {
 	if strings.Contains(s, "Usershczs8") {
 		t.Errorf("summary should not contain mangled path: %q", s)
 	}
+	if !strings.Contains(s, "Host Key") && !strings.Contains(s, "Host key") {
+		t.Errorf("summary should include host key notice: %q", s)
+	}
 }

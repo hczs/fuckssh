@@ -16,6 +16,7 @@ func WriteAddSuccessSummary(stderr io.Writer, result *WizardResult, configPath s
 		_, _ = fmt.Fprintf(stderr, format, args...)
 	}
 	write("%s\n", i18n.T(i18n.KeySummaryHeadline))
+	write(i18n.T(i18n.KeySummarySSHCmd), result.Alias)
 	write("%s", i18n.T(i18n.KeySummaryTitle))
 	if result.PasswordFlowComplete {
 		if result.BackupPath != "" {
@@ -31,7 +32,6 @@ func WriteAddSuccessSummary(stderr io.Writer, result *WizardResult, configPath s
 		write(i18n.T(i18n.KeySummaryHostWritten), result.Alias, configPath)
 		write(i18n.T(i18n.KeySummaryExistingKey), result.IdentityFile)
 	}
-	write("%s", i18n.T(i18n.KeySummaryHostKey))
 	write("%s\n", i18n.T(i18n.KeySummaryListHint))
-	write("%s\n", i18n.T(i18n.KeySummaryNextStep, configPath, result.Alias))
+	write("%s\n", i18n.T(i18n.KeySummaryNextStep, configPath))
 }

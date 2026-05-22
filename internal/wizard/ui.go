@@ -56,6 +56,14 @@ func safeTTYString(s string) string {
 	return filepath.ToSlash(s)
 }
 
+// effectivePort 空端口视为 22。
+func effectivePort(port string) string {
+	if strings.TrimSpace(port) == "" {
+		return "22"
+	}
+	return strings.TrimSpace(port)
+}
+
 // formatTarget 用于确认摘要中的 user@host:port。
 func formatTarget(host, user, port string) string {
 	p := strings.TrimSpace(port)

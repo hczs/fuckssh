@@ -57,11 +57,15 @@ func runAdd(stdout, stderr io.Writer) error {
 	}
 
 	configExisted := configFileExists(configPath)
+	total := wizard.KeyFlowProgressTotal
+
+	wizard.ReportProgressStep(1, total, i18n.T(i18n.KeyWizardProgressBackup))
 	bakPath, err := config.Backup(configPath)
 	if err != nil {
 		return err
 	}
 
+	wizard.ReportProgressStep(2, total, i18n.T(i18n.KeyWizardProgressStageKey))
 	destPriv, copied, err := stageKeyForConfig(result.Alias, result.IdentityFile)
 	if err != nil {
 		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, false)
@@ -77,6 +81,7 @@ func runAdd(stdout, stderr io.Writer) error {
 		return err
 	}
 
+	wizard.ReportProgressStep(3, total, i18n.T(i18n.KeyWizardProgressWriteCfg))
 	entry := config.HostEntry{
 		Alias:        result.Alias,
 		HostName:     result.HostName,

@@ -127,8 +127,8 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 	if !strings.Contains(stderr.String(), "本次已完成") {
 		t.Errorf("stderr = %q, want success summary", stderr.String())
 	}
-	if !strings.Contains(stderr.String(), "Host Key") {
-		t.Errorf("stderr = %q, want host key notice", stderr.String())
+	if !strings.Contains(stderr.String(), "ssh test-vps") {
+		t.Errorf("stderr = %q, want ssh command in summary", stderr.String())
 	}
 
 	entries, err := config.ParseFile(cfg)
@@ -193,8 +193,8 @@ func TestAdd_passwordMode_integrationSkipsSecondBackup(t *testing.T) {
 	if !strings.Contains(stderr.String(), "本次已完成") {
 		t.Errorf("stderr = %q, want success summary", stderr.String())
 	}
-	if !strings.Contains(stderr.String(), "Host Key") {
-		t.Errorf("stderr = %q, want host key notice", stderr.String())
+	if !strings.Contains(stderr.String(), "ssh pw-vps") {
+		t.Errorf("stderr = %q, want ssh command in summary", stderr.String())
 	}
 	matches, _ := filepath.Glob(filepath.Join(dir, "config.fuckssh.bak.*"))
 	if len(matches) > 0 {

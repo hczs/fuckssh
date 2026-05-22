@@ -3,7 +3,9 @@ package wizard
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -14,27 +16,28 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/fuckssh/fuckssh/internal/i18n"
+	"github.com/fuckssh/fuckssh/internal/platform"
 )
 
-type pwTestState int
+type keyIDState int
 
 const (
-	pwStateEdit pwTestState = iota
-	pwStateTesting
-	pwStateOK
-	pwStateFail
+	keyIDStateEdit keyIDState = iota
+	keyIDStateTesting
+	keyIDStateOK
+	keyIDStateFail
 )
 
-type pwTestDoneMsg struct {
+type keyIDDoneMsg struct {
 	err     error
 	elapsed time.Duration
 }
 
-// passwordTestField 在密码输入行尾内联展示测连 spinner / 成功 / 失败状态。
-type passwordTestField struct {
+// keyIdentityField 在私钥路径输入行尾内联展示测连 spinner / 成功 / 失败状态（与密码字段一致）。
+type keyIdentityField struct {
 	ctx      context.Context
-	in       *PasswordModeInput
-	testAuth passwordAuthTestFn
+	in       *KeyModeInput
+	testAuth keyAuthTestFn
 	onOK     func()
 	onFail   func()
 
@@ -48,114 +51,114 @@ type passwordTestField struct {
 	textinput textinput.Model
 	spinner   spinner.Model
 
-	state     pwTestState
+	state     keyIDState
 	elapsed   time.Duration
-	inlineMsg string // 行内状态文案（不通过 Error() 交给 huh，避免底部重复）
+	inlineMsg string
 
-	focused  bool
-	inline   bool
+	focused    bool
+	inline     bool
 	accessible bool
-	width    int
-	height   int
-	theme    *huh.Theme
-	keymap   huh.InputKeyMap
+	width      int
+	height     int
+	theme      *huh.Theme
+	keymap     huh.InputKeyMap
 }
 
-var passwordFieldIDSeq int
+var keyIdentityFieldIDSeq int
 
-func nextPasswordFieldID() int {
-	passwordFieldIDSeq++
-	return passwordFieldIDSeq
+func nextKeyIdentityFieldID() int {
+	keyIdentityFieldIDSeq++
+	return keyIdentityFieldIDSeq
 }
 
-// NewPasswordTestField 创建带内联测连反馈的密码字段。
-func NewPasswordTestField(ctx context.Context, in *PasswordModeInput, testAuth passwordAuthTestFn, onOK, onFail func()) *passwordTestField {
+// NewKeyIdentityField 创建带内联测连反馈的私钥路径字段。
+func NewKeyIdentityField(ctx context.Context, in *KeyModeInput, testAuth keyAuthTestFn, onOK, onFail func()) *keyIdentityField {
 	ti := textinput.New()
-	ti.EchoMode = textinput.EchoPassword
-	ti.CharLimit = 256
+	ti.CharLimit = 512
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
-	return &passwordTestField{
+	return &keyIdentityField{
 		ctx:         ctx,
 		in:          in,
 		testAuth:    testAuth,
 		onOK:        onOK,
 		onFail:      onFail,
 		accessor:    &huh.EmbeddedAccessor[string]{},
-		id:          nextPasswordFieldID(),
+		id:          nextKeyIdentityFieldID(),
 		textinput:   ti,
 		spinner:     sp,
-		state:  pwStateEdit,
-		keymap: huh.NewDefaultKeyMap().Input,
+		state:       keyIDStateEdit,
+		description: i18n.T(i18n.KeyWizardIdentityDesc),
+		keymap:      huh.NewDefaultKeyMap().Input,
 	}
 }
 
-func (f *passwordTestField) Value(v *string) *passwordTestField {
+func (f *keyIdentityField) Value(v *string) *keyIdentityField {
 	f.accessor = huh.NewPointerAccessor(v)
 	f.textinput.SetValue(f.accessor.Get())
 	return f
 }
 
-func (f *passwordTestField) Key(k string) *passwordTestField {
+func (f *keyIdentityField) Key(k string) *keyIdentityField {
 	f.key = k
 	return f
 }
 
-func (f *passwordTestField) Title(title string) *passwordTestField {
+func (f *keyIdentityField) Title(title string) *keyIdentityField {
 	f.title = title
 	return f
 }
 
-func (f *passwordTestField) activeStyles() *huh.FieldStyles {
+func (f *keyIdentityField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
 		f.theme = huh.ThemeCharm()
 	}
-	if f.focused && f.state != pwStateTesting && f.state != pwStateOK {
+	if f.focused && f.state != keyIDStateTesting && f.state != keyIDStateOK {
 		return &f.theme.Focused
 	}
 	return &f.theme.Blurred
 }
 
-func (f *passwordTestField) statusStyle() lipgloss.Style {
+func (f *keyIdentityField) statusStyle() lipgloss.Style {
 	if f.theme == nil {
 		return lipgloss.NewStyle()
 	}
 	switch f.state {
-	case pwStateOK:
+	case keyIDStateOK:
 		return lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
-	case pwStateFail:
+	case keyIDStateFail:
 		return f.theme.Focused.ErrorMessage
 	default:
 		return f.theme.Blurred.Description
 	}
 }
 
-func (f *passwordTestField) statusText() string {
+func (f *keyIdentityField) statusText() string {
 	switch f.state {
-	case pwStateTesting:
+	case keyIDStateTesting:
 		return i18n.T(i18n.KeyWizardTestingConnInline)
-	case pwStateOK:
+	case keyIDStateOK:
 		return i18n.T(i18n.KeyWizardConnOKMs, f.elapsed.Milliseconds())
-	case pwStateFail:
+	case keyIDStateFail:
 		if f.inlineMsg != "" {
 			return f.inlineMsg
 		}
-		return i18n.T(i18n.KeyWizardConnFailInline)
+		return i18n.T(i18n.KeyWizardKeyAuthFailed)
 	default:
 		return ""
 	}
 }
 
-func (f *passwordTestField) renderInputRow(styles *huh.FieldStyles) string {
+func (f *keyIdentityField) renderInputRow(styles *huh.FieldStyles) string {
 	line := f.textinput.View()
 	status := f.statusText()
 	if status == "" {
 		return line
 	}
 	var suffix string
-	if f.state == pwStateTesting {
+	if f.state == keyIDStateTesting {
 		suffix = f.spinner.View() + " " + f.statusStyle().Render(status)
 	} else {
 		suffix = f.statusStyle().Render(status)
@@ -163,35 +166,65 @@ func (f *passwordTestField) renderInputRow(styles *huh.FieldStyles) string {
 	return lipgloss.JoinHorizontal(lipgloss.Top, line, " ", suffix)
 }
 
-func (f *passwordTestField) startTest(password string) tea.Cmd {
-	f.in.Password = strings.TrimSpace(password)
-	f.accessor.Set(f.in.Password)
-	f.state = pwStateTesting
+func (f *keyIdentityField) preparePath(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return errors.New(i18n.T(i18n.KeyWizardErrEmpty))
+	}
+	expanded, err := platform.ExpandPath(path)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(expanded); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("%s: %s", i18n.T(i18n.KeyWizardErrKeyMissing), expanded)
+		}
+		return fmt.Errorf("%s: %v", i18n.T(i18n.KeyWizardErrKeyRead), err)
+	}
+	f.in.IdentityFile = expanded
+	f.accessor.Set(expanded)
+	f.textinput.SetValue(expanded)
+	return nil
+}
+
+func (f *keyIdentityField) startTest(path string) tea.Cmd {
+	if err := f.preparePath(path); err != nil {
+		f.state = keyIDStateFail
+		f.inlineMsg = err.Error()
+		if f.onFail != nil {
+			f.onFail()
+		}
+		f.textinput.Focus()
+		f.focused = true
+		return textinput.Blink
+	}
+	f.state = keyIDStateTesting
 	f.inlineMsg = ""
 	f.textinput.Blur()
 
 	testCmd := func() tea.Msg {
-		elapsed, err := testPasswordConnection(f.ctx, f.in, password, f.testAuth)
-		return pwTestDoneMsg{err: err, elapsed: elapsed}
+		start := time.Now()
+		err := f.testAuth(f.ctx, *f.in)
+		return keyIDDoneMsg{err: err, elapsed: time.Since(start)}
 	}
 	return tea.Batch(f.spinner.Tick, testCmd)
 }
 
-func (f *passwordTestField) handleTestDone(msg pwTestDoneMsg) (tea.Model, tea.Cmd) {
+func (f *keyIdentityField) handleTestDone(msg keyIDDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
-		f.state = pwStateFail
-		f.inlineMsg = connectionTestFailureMessage(msg.err)
+		f.state = keyIDStateFail
+		f.inlineMsg = keyConnectionTestFailureMessage(msg.err)
 		if f.onFail != nil {
 			f.onFail()
 		}
 		f.textinput.SetValue("")
 		f.accessor.Set("")
-		f.in.Password = ""
+		f.in.IdentityFile = ""
 		f.textinput.Focus()
 		f.focused = true
 		return f, textinput.Blink
 	}
-	f.state = pwStateOK
+	f.state = keyIDStateOK
 	f.elapsed = msg.elapsed
 	f.inlineMsg = ""
 	if f.onOK != nil {
@@ -200,29 +233,25 @@ func (f *passwordTestField) handleTestDone(msg pwTestDoneMsg) (tea.Model, tea.Cm
 	return f, nil
 }
 
-// Init implements huh.Field.
-func (f *passwordTestField) Init() tea.Cmd {
-	return nil
-}
+func (f *keyIdentityField) Init() tea.Cmd { return nil }
 
-// Update implements huh.Field.
-func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (f *keyIdentityField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
-	case pwTestDoneMsg:
+	case keyIDDoneMsg:
 		return f.handleTestDone(msg)
 	case spinner.TickMsg:
-		if f.state == pwStateTesting {
+		if f.state == keyIDStateTesting {
 			var cmd tea.Cmd
 			f.spinner, cmd = f.spinner.Update(msg)
 			return f, cmd
 		}
 	case tea.KeyMsg:
-		if f.state == pwStateTesting {
+		if f.state == keyIDStateTesting {
 			return f, nil
 		}
-		if f.state == pwStateOK {
+		if f.state == keyIDStateOK {
 			switch {
 			case key.Matches(msg, f.keymap.Prev):
 				return f, huh.PrevField
@@ -236,17 +265,17 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, f.keymap.Prev):
 			return f, huh.PrevField
 		case key.Matches(msg, f.keymap.Next, f.keymap.Submit):
-			pwd := strings.TrimSpace(f.textinput.Value())
-			if pwd == "" {
-				f.state = pwStateFail
+			path := strings.TrimSpace(f.textinput.Value())
+			if path == "" {
+				f.state = keyIDStateFail
 				f.inlineMsg = i18n.T(i18n.KeyWizardErrEmpty)
 				return f, nil
 			}
-			return f, f.startTest(pwd)
+			return f, f.startTest(path)
 		}
 	}
 
-	if f.state == pwStateEdit || f.state == pwStateFail {
+	if f.state == keyIDStateEdit || f.state == keyIDStateFail {
 		var cmd tea.Cmd
 		f.textinput, cmd = f.textinput.Update(msg)
 		f.accessor.Set(f.textinput.Value())
@@ -256,11 +285,8 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return f, tea.Batch(cmds...)
 }
 
-// View implements huh.Field.
-func (f *passwordTestField) View() string {
+func (f *keyIdentityField) View() string {
 	styles := f.activeStyles()
-	maxWidth := f.width - styles.Base.GetHorizontalFrameSize()
-
 	f.textinput.PlaceholderStyle = styles.TextInput.Placeholder
 	f.textinput.PromptStyle = styles.TextInput.Prompt
 	f.textinput.Cursor.Style = styles.TextInput.Cursor
@@ -273,78 +299,70 @@ func (f *passwordTestField) View() string {
 		sb.WriteString("\n")
 	}
 	switch f.state {
-	case pwStateEdit:
+	case keyIDStateEdit:
 		if f.description != "" {
 			sb.WriteString(styles.Description.Render(f.description))
 			sb.WriteString("\n")
 		}
-	case pwStateOK:
+	case keyIDStateOK:
 		sb.WriteString(styles.Description.Render(i18n.T(i18n.KeyWizardConnOKContinue)))
 		sb.WriteString("\n")
 	}
 	sb.WriteString(f.renderInputRow(styles))
-
-	_ = maxWidth
 	return styles.Base.Width(f.width).Height(f.height).Render(sb.String())
 }
 
-func (f *passwordTestField) Error() error {
-	// 失败文案仅在输入行尾展示，避免 huh 在表单底部再渲染一行 * 错误。
-	return nil
-}
+func (f *keyIdentityField) Error() error { return nil }
 
-func (f *passwordTestField) Skip() bool  { return false }
-func (f *passwordTestField) Zoom() bool { return false }
+func (f *keyIdentityField) Skip() bool  { return false }
+func (f *keyIdentityField) Zoom() bool   { return false }
 
-func (f *passwordTestField) Focus() tea.Cmd {
+func (f *keyIdentityField) Focus() tea.Cmd {
 	f.focused = true
-	if f.state == pwStateEdit || f.state == pwStateFail {
+	if f.state == keyIDStateEdit || f.state == keyIDStateFail {
 		return f.textinput.Focus()
 	}
-	// 测连成功后本字段仍保持焦点，等待 Enter 进入别名步。
 	return nil
 }
 
-func (f *passwordTestField) Blur() tea.Cmd {
+func (f *keyIdentityField) Blur() tea.Cmd {
 	f.focused = false
 	f.textinput.Blur()
 	f.accessor.Set(f.textinput.Value())
 	return nil
 }
 
-func (f *passwordTestField) KeyBinds() []key.Binding {
-	if f.state == pwStateTesting {
+func (f *keyIdentityField) KeyBinds() []key.Binding {
+	if f.state == keyIDStateTesting {
 		return nil
 	}
-	if f.state == pwStateOK {
+	if f.state == keyIDStateOK {
 		return []key.Binding{f.keymap.Prev, f.keymap.Submit, f.keymap.Next}
 	}
 	return []key.Binding{f.keymap.Prev, f.keymap.Submit, f.keymap.Next}
 }
 
-func (f *passwordTestField) Run() error {
-	return huh.Run(f)
-}
+func (f *keyIdentityField) Run() error { return huh.Run(f) }
 
-func (f *passwordTestField) RunAccessible(w io.Writer, r io.Reader) error {
+func (f *keyIdentityField) RunAccessible(w io.Writer, r io.Reader) error {
 	_ = w
 	_ = r
-	return errors.New("password test field: accessible mode not supported")
+	return errors.New("key identity field: accessible mode not supported")
 }
 
-func (f *passwordTestField) WithTheme(theme *huh.Theme) huh.Field {
+func (f *keyIdentityField) WithTheme(theme *huh.Theme) huh.Field {
 	if theme != nil && f.theme == nil {
 		f.theme = theme
 	}
 	return f
 }
 
-func (f *passwordTestField) WithAccessible(accessible bool) huh.Field {
+func (f *keyIdentityField) WithAccessible(accessible bool) huh.Field {
 	f.accessible = accessible
 	return f
 }
 
-func (f *passwordTestField) WithKeyMap(k *huh.KeyMap) huh.Field {
+func (f *keyIdentityField) WithKeyMap(k *huh.KeyMap) huh.Field {
 	if k != nil {
 		f.keymap = k.Input
 		f.textinput.KeyMap.AcceptSuggestion = f.keymap.AcceptSuggestion
@@ -352,7 +370,7 @@ func (f *passwordTestField) WithKeyMap(k *huh.KeyMap) huh.Field {
 	return f
 }
 
-func (f *passwordTestField) WithWidth(width int) huh.Field {
+func (f *keyIdentityField) WithWidth(width int) huh.Field {
 	styles := f.activeStyles()
 	f.width = width
 	frame := styles.Base.GetHorizontalFrameSize()
@@ -364,17 +382,17 @@ func (f *passwordTestField) WithWidth(width int) huh.Field {
 	return f
 }
 
-func (f *passwordTestField) WithHeight(height int) huh.Field {
+func (f *keyIdentityField) WithHeight(height int) huh.Field {
 	f.height = height
 	return f
 }
 
-func (f *passwordTestField) WithPosition(p huh.FieldPosition) huh.Field {
+func (f *keyIdentityField) WithPosition(p huh.FieldPosition) huh.Field {
 	f.keymap.Prev.SetEnabled(!p.IsFirst())
 	f.keymap.Next.SetEnabled(!p.IsLast())
 	f.keymap.Submit.SetEnabled(p.IsLast())
 	return f
 }
 
-func (f *passwordTestField) GetKey() string   { return f.key }
-func (f *passwordTestField) GetValue() any    { return f.accessor.Get() }
+func (f *keyIdentityField) GetKey() string { return f.key }
+func (f *keyIdentityField) GetValue() any  { return f.accessor.Get() }

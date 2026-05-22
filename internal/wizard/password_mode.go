@@ -52,7 +52,7 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 	var draft PasswordModeInput
 	var final PasswordModeInput
 	for {
-		in, err := collectPasswordModeInput(ctx, nil, &draft)
+		in, err := collectPasswordModeInput(ctx, configPath, nil, &draft)
 		if err != nil {
 			return nil, "", err
 		}
@@ -60,11 +60,6 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 
 		final, err = finalizePasswordModeInput(in)
 		clearPassword(&in.Password)
-		if err != nil {
-			return nil, "", err
-		}
-
-		final.Alias, err = ensureAvailableAlias(configPath, final.Alias)
 		if err != nil {
 			return nil, "", err
 		}
@@ -151,7 +146,7 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 		progress = func(string) {}
 	}
 
-	progress("正在备份 SSH config…")
+	progress(i18n.T(i18n.KeyWizardProgressBackup))
 	bakPath, err := deps.backup(configPath)
 	if err != nil {
 		return state, err
@@ -170,7 +165,7 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 		return state, err
 	}
 
-	progress("正在生成 Ed25519 密钥…")
+	progress(i18n.T(i18n.KeyWizardProgressKeygen))
 	privPath, pubLine, err := deps.writeKeys(sshDir, in.Alias)
 	if err != nil {
 		return state, err
@@ -182,7 +177,7 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 		return state, err
 	}
 
-	progress("正在写入 SSH config…")
+	progress(i18n.T(i18n.KeyWizardProgressWriteCfg))
 	identityRef, err := platform.IdentityFileRef(privPath)
 	if err != nil {
 		return state, err
@@ -207,7 +202,7 @@ func deployPublicKey(ctx context.Context, in PasswordModeInput, pubLine string, 
 	if progress == nil {
 		progress = func(string) {}
 	}
-	progress("正在连接服务器并部署公钥…")
+	progress(i18n.T(i18n.KeyWizardProgressDeployKey))
 	return deps.deploy(ctx, sshclient.DeployOpts{
 		Host:       in.HostName,
 		Port:       in.Port,

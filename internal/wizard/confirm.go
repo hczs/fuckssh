@@ -29,7 +29,7 @@ func buildPasswordConfirmSummary(in PasswordModeInput, configPath string) string
 		strings.TrimSpace(in.HostName),
 		effectivePort(in.Port),
 		safeTTYString(configPath),
-	)
+	) + "\n" + i18n.T(i18n.KeyWizardConfirmHostKey)
 }
 
 func buildKeyConfirmSummary(in KeyModeInput, configPath string) string {
@@ -42,7 +42,7 @@ func buildKeyConfirmSummary(in KeyModeInput, configPath string) string {
 		effectivePort(in.Port),
 		safeTTYString(configPath),
 		safeTTYString(in.IdentityFile),
-	)
+	) + "\n" + i18n.T(i18n.KeyWizardConfirmHostKey)
 }
 
 func confirmAlias(alias, hostName string) string {
@@ -71,7 +71,7 @@ func runConfirmForm(summary string) error {
 		return err
 	}
 	if !ok {
-		reportProgress(i18n.T(i18n.KeyWizardRetryHint))
+		SetFormRetryHint(i18n.T(i18n.KeyWizardRetryHint))
 		return ErrWizardRetryForm
 	}
 	return nil

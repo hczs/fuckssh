@@ -48,18 +48,13 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 	var draft KeyModeInput
 	var out KeyModeInput
 	for {
-		in, err := collectKeyModeInput(context.Background(), nil, &draft)
+		in, err := collectKeyModeInput(context.Background(), configPath, nil, &draft)
 		if err != nil {
 			return nil, err
 		}
 		draft = in
 
 		out, err = finalizeKeyModeInput(in, os.Stat)
-		if err != nil {
-			return nil, err
-		}
-
-		out.Alias, err = ensureAvailableAlias(configPath, out.Alias)
 		if err != nil {
 			return nil, err
 		}

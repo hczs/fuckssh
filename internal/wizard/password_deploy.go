@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -45,13 +44,13 @@ func defaultPromptPermissionFix(ctx context.Context, perm *sshclient.AuthorizedK
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, perm.Error())
-	fmt.Fprintln(os.Stderr, "")
 
 	retry := false
 	form := huh.NewForm(
 		huh.NewGroup(
+			huh.NewNote().
+				Title(i18n.T(i18n.KeyWizardPermFixPrompt)).
+				Description(perm.Error()),
 			huh.NewConfirm().
 				Title(i18n.T(i18n.KeyWizardPermFixPrompt)).
 				Affirmative(i18n.T(i18n.KeyWizardPermFixYes)).

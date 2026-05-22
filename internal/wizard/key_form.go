@@ -3,22 +3,30 @@ package wizard
 import (
 	"context"
 	"errors"
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
-	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/platform"
+	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 )
 
 // keyAuthTestFn 用于密钥连接测试（单测可注入 mock）。
 type keyAuthTestFn func(ctx context.Context, in KeyModeInput) error
 
+func keyConnectionTestFailureMessage(err error) string {
+	if errors.Is(err, keys.ErrPassphraseNotSupported) {
+		return i18n.T(i18n.KeyWizardPassphraseNA)
+	}
+	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
+		return i18n.T(i18n.KeyWizardKeyAuthFailed)
+	}
+	return connectionTestFailureMessage(err)
+}
+
 // collectKeyModeInput 用堆叠表单逐项收集；draft 非空时预填（确认页返回修改时用）。
-func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn, draft *KeyModeInput) (KeyModeInput, error) {
+func collectKeyModeInput(ctx context.Context, configPath string, testAuth keyAuthTestFn, draft *KeyModeInput) (KeyModeInput, error) {
 	if testAuth == nil {
 		testAuth = defaultKeyAuthTest
 	}
@@ -26,7 +34,6 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn, draft *Key
 	if draft != nil {
 		in = *draft
 	}
-	var keyFeedback connFeedback
 	reveal := &revealState{n: 1}
 	seedRevealKey(reveal, in)
 	emptyMsg := i18n.T(i18n.KeyWizardErrEmpty)
@@ -35,6 +42,7 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn, draft *Key
 		huh.NewGroup(
 			huh.NewInput().
 				Title(stepTitle(2, i18n.KeyWizardHostIP)).
+				Description(firstFieldDescription("")).
 				Value(&in.HostName).
 				Validate(func(s string) error {
 					if err := nonEmpty(emptyMsg)(s); err != nil {
@@ -50,7 +58,10 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn, draft *Key
 				Description(i18n.T(i18n.KeyWizardPortDesc)).
 				Placeholder("22").
 				Value(&in.Port).
-				Validate(func(string) error {
+				Validate(func(s string) error {
+					if err := validatePort(s); err != nil {
+						return err
+					}
 					reveal.showThrough(2)
 					return nil
 				}),
@@ -69,23 +80,20 @@ func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn, draft *Key
 				}),
 		).WithHideFunc(hideUntilRevealed(2, reveal)),
 		huh.NewGroup(
-			huh.NewInput().
+			NewKeyIdentityField(ctx, &in, testAuth,
+				func() { reveal.showThrough(4) },
+				func() { reveal.lockThrough(3) },
+			).
 				Title(stepTitle(5, i18n.KeyWizardIdentityFile)).
-				Description(i18n.T(i18n.KeyWizardIdentityDesc)).
-				Value(&in.IdentityFile).
-				Validate(func(path string) error {
-					if err := keyIdentityValidate(ctx, &in, testAuth, &keyFeedback)(path); err != nil {
-						return err
-					}
-					reveal.showThrough(4)
-					return nil
-				}),
+				Key("identity").
+				Value(&in.IdentityFile),
 		).WithHideFunc(hideUntilRevealed(3, reveal)),
 		huh.NewGroup(
 			huh.NewInput().
 				Title(stepTitle(6, i18n.KeyWizardAlias)).
 				DescriptionFunc(func() string { return aliasDescription(&in.HostName) }, &in.HostName).
-				Value(&in.Alias),
+				Value(&in.Alias).
+				Validate(aliasFieldValidate(configPath, &in.HostName)),
 		).WithHideFunc(hideUntilRevealed(4, reveal)),
 	).WithLayout(huh.LayoutStack).WithShowErrors(false)
 
@@ -106,48 +114,4 @@ func defaultKeyAuthTest(ctx context.Context, in KeyModeInput) error {
 		User:         strings.TrimSpace(in.User),
 		IdentityFile: expanded,
 	})
-}
-
-func keyIdentityValidate(ctx context.Context, in *KeyModeInput, testAuth keyAuthTestFn, feedback *connFeedback) func(string) error {
-	return func(path string) error {
-		if strings.TrimSpace(path) == "" {
-			return errors.New(i18n.T(i18n.KeyWizardErrEmpty))
-		}
-		in.IdentityFile = strings.TrimSpace(path)
-
-		expanded, err := platform.ExpandPath(in.IdentityFile)
-		if err != nil {
-			return err
-		}
-		if _, err := os.Stat(expanded); err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("%w: %s", ErrInvalidInput, expanded)
-			}
-			return err
-		}
-		in.IdentityFile = expanded
-
-		reportProgress(i18n.T(i18n.KeyWizardTestingConn))
-		feedback.setTesting()
-		err = testAuth(ctx, *in)
-		if err != nil {
-			feedback.message = ""
-			return errors.New(keyConnectionTestFailureMessage(err))
-		}
-		feedback.setOK()
-		fmt.Fprintf(progressOut, "%s\n", i18n.T(i18n.KeyWizardConnOK))
-		return nil
-	}
-}
-
-func keyConnectionTestFailureMessage(err error) string {
-	if errors.Is(err, keys.ErrPassphraseNotSupported) {
-		return i18n.T(i18n.KeyWizardPassphraseNA)
-	}
-	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
-		return i18n.T(i18n.KeyWizardKeyAuthFailed)
-	}
-	msg := err.Error()
-	msg = strings.TrimPrefix(msg, "sshclient: deploy failed: ")
-	return msg
 }
