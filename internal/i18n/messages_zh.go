@@ -10,7 +10,7 @@ var messagesZH = map[string]string{
 	KeyAddShort:    "通过交互式向导添加 VPS",
 	KeyAddLong:     "运行交互式向导：生成密钥、更新 ssh config，并可自动部署公钥。",
 	KeyListShort:   "列出 ssh config 中的 Host",
-	KeyListLong:    "解析并展示本机 ~/.ssh/config 中的所有 Host 条目。",
+	KeyListLong:    "解析并展示本机 ~/.ssh/config 中的所有 Host 条目；同一 Host 行的多个别名以逗号分隔显示。",
 	KeySearchShort: "按别名、地址或 IP 搜索 Host",
 	KeySearchLong:  "在别名、HostName、IP 中进行关键词匹配。",
 	KeyConfigFlag:  "ssh config 文件路径（默认 ~/.ssh/config）",

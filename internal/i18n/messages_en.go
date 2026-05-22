@@ -10,7 +10,7 @@ var messagesEN = map[string]string{
 	KeyAddShort:    "Add a VPS host via interactive wizard",
 	KeyAddLong:     "Run the wizard to generate keys, update ssh config, and optionally deploy a public key.",
 	KeyListShort:   "List hosts from ssh config",
-	KeyListLong:    "Parse and display all Host entries in your ssh config file.",
+	KeyListLong:    "Parse and display all Host entries in your ssh config file. Multiple aliases on one Host line are shown comma-separated.",
 	KeySearchShort: "Search hosts by alias, hostname, or IP",
 	KeySearchLong:  "Match hosts by alias, HostName, or IP substring.",
 	KeyConfigFlag:  "path to ssh config file (default: ~/.ssh/config)",

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
 )
@@ -13,32 +14,75 @@ func formatBorderedTable(headers []string, rows [][]string) string {
 		return ""
 	}
 	ncol := len(headers)
-	widths := columnWidths(headers, rows)
+	asciiOnly := tableIsASCII(headers, rows)
+	widths := columnWidths(headers, rows, asciiOnly)
 
 	var b strings.Builder
+	b.Grow(estimateTableSize(len(rows), widths))
 	writeBorder(&b, "┌", "┬", "┐", widths)
-	writeCells(&b, headers, widths)
+	writeCells(&b, headers, widths, asciiOnly)
 	writeBorder(&b, "├", "┼", "┤", widths)
 	for _, row := range rows {
-		writeCells(&b, padRow(row, ncol), widths)
+		writeCells(&b, padRow(row, ncol), widths, asciiOnly)
 	}
 	writeBorder(&b, "└", "┴", "┘", widths)
 	return b.String()
 }
 
-func columnWidths(headers []string, rows [][]string) []int {
+func tableIsASCII(headers []string, rows [][]string) bool {
+	for _, h := range headers {
+		if !isASCII(h) {
+			return false
+		}
+	}
+	for _, row := range rows {
+		for _, cell := range row {
+			if !isASCII(cell) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+	return true
+}
+
+func displayWidth(s string, asciiOnly bool) int {
+	if asciiOnly || isASCII(s) {
+		return len(s)
+	}
+	return runewidth.StringWidth(s)
+}
+
+func columnWidths(headers []string, rows [][]string, asciiOnly bool) []int {
 	widths := make([]int, len(headers))
 	for i, h := range headers {
-		widths[i] = runewidth.StringWidth(h)
+		widths[i] = displayWidth(h, asciiOnly)
 	}
 	for _, row := range rows {
 		for i := 0; i < len(headers) && i < len(row); i++ {
-			if w := runewidth.StringWidth(row[i]); w > widths[i] {
+			if w := displayWidth(row[i], asciiOnly); w > widths[i] {
 				widths[i] = w
 			}
 		}
 	}
 	return widths
+}
+
+func estimateTableSize(rowCount int, widths []int) int {
+	sum := 0
+	for _, w := range widths {
+		sum += w + 3
+	}
+	// 顶框 + 表头 + 分隔 + 数据行 + 底框
+	return (rowCount + 4) * (sum + 1)
 }
 
 func padRow(row []string, ncol int) []string {
@@ -62,7 +106,7 @@ func writeBorder(b *strings.Builder, left, mid, right string, widths []int) {
 	b.WriteByte('\n')
 }
 
-func writeCells(b *strings.Builder, cells []string, widths []int) {
+func writeCells(b *strings.Builder, cells []string, widths []int, asciiOnly bool) {
 	b.WriteString("│")
 	for i, w := range widths {
 		cell := ""
@@ -70,15 +114,15 @@ func writeCells(b *strings.Builder, cells []string, widths []int) {
 			cell = cells[i]
 		}
 		b.WriteByte(' ')
-		b.WriteString(padCell(cell, w))
+		b.WriteString(padCell(cell, w, asciiOnly))
 		b.WriteByte(' ')
 		b.WriteString("│")
 	}
 	b.WriteByte('\n')
 }
 
-func padCell(s string, width int) string {
-	pad := width - runewidth.StringWidth(s)
+func padCell(s string, width int, asciiOnly bool) string {
+	pad := width - displayWidth(s, asciiOnly)
 	if pad <= 0 {
 		return s
 	}

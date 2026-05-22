@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"sync"
+
 	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/spf13/cobra"
 )
+
+var helpLocalizedOnce sync.Once
 
 var (
 	rootCmd = &cobra.Command{
@@ -44,9 +48,29 @@ func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 		applyLocalizedHelp()
 		return nil
 	}
-	if err := i18n.EnsureInteractive(cmd.ErrOrStderr()); err != nil {
+	var err error
+	if isReadonlyCmd(cmd) {
+		err = i18n.EnsureLoaded()
+	} else {
+		err = i18n.EnsureInteractive(cmd.ErrOrStderr())
+	}
+	if err != nil {
 		return err
 	}
-	applyLocalizedHelp()
+	applyLocalizedHelpOnce()
 	return nil
+}
+
+// isReadonlyCmd 判断是否为只读子命令（跳过交互式语言选择以加快响应）。
+func isReadonlyCmd(cmd *cobra.Command) bool {
+	switch cmd.Name() {
+	case "list", "search":
+		return true
+	default:
+		return false
+	}
+}
+
+func applyLocalizedHelpOnce() {
+	helpLocalizedOnce.Do(applyLocalizedHelp)
 }

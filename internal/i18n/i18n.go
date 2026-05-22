@@ -28,9 +28,11 @@ type settingsFile struct {
 }
 
 var (
-	mu       sync.RWMutex
-	current  Lang = LangZH
-	loadOnce sync.Once
+	mu            sync.RWMutex
+	current       Lang = LangZH
+	loadOnce      sync.Once
+	loadErr       error
+	langConfigured bool // 已从环境变量或 settings.json 成功加载
 )
 
 // envLangKey 允许测试或 CI 跳过交互并固定语言。
@@ -142,18 +144,39 @@ func Save(lang Lang) error {
 	return os.WriteFile(path, data, 0o600)
 }
 
-// EnsureInteractive 确保语言已设置：有配置则加载；无配置且 TTY 则弹出选择；否则默认 zh。
-func EnsureInteractive(stderr io.Writer) error {
-	loadOnce.Do(func() {})
-	if v := os.Getenv(envLangKey); v != "" {
-		SetCurrent(Lang(v))
-		return nil
-	}
-	ok, err := Load()
-	if err != nil {
+// loadLangOnce 进程内只读一次语言配置（环境变量或 settings.json）。
+func loadLangOnce() error {
+	loadOnce.Do(func() {
+		if v := os.Getenv(envLangKey); v != "" {
+			SetCurrent(Lang(v))
+			langConfigured = true
+			return
+		}
+		var ok bool
+		ok, loadErr = Load()
+		langConfigured = ok
+	})
+	return loadErr
+}
+
+// EnsureLoaded 加载已保存的语言；无配置时默认中文，不弹出选择器（供 list/search 等只读命令）。
+func EnsureLoaded() error {
+	if err := loadLangOnce(); err != nil {
 		return err
 	}
-	if ok {
+	if langConfigured || os.Getenv(envLangKey) != "" {
+		return nil
+	}
+	SetCurrent(LangZH)
+	return nil
+}
+
+// EnsureInteractive 确保语言已设置：有配置则加载；无配置且 TTY 则弹出选择；否则默认 zh。
+func EnsureInteractive(stderr io.Writer) error {
+	if err := loadLangOnce(); err != nil {
+		return err
+	}
+	if langConfigured || os.Getenv(envLangKey) != "" {
 		return nil
 	}
 	if isInteractive(stderr) {
@@ -162,6 +185,7 @@ func EnsureInteractive(stderr io.Writer) error {
 			return err
 		}
 		SetCurrent(lang)
+		langConfigured = true
 		return Save(lang)
 	}
 	SetCurrent(LangZH)
@@ -224,4 +248,6 @@ func ResetForTest() {
 	pickLanguageFn = pickLanguageInteractive
 	SetCurrent(LangZH)
 	loadOnce = sync.Once{}
+	loadErr = nil
+	langConfigured = false
 }
