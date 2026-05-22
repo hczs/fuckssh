@@ -5,7 +5,7 @@ type HostEntry struct {
 	// Alias 为 Host 行上的第一个别名，供表格主键展示。
 	Alias string
 	// Aliases 为 Host 行上的全部别名（含 Alias）。
-	Aliases []string
+	Aliases      []string
 	HostName     string
 	User         string
 	Port         string

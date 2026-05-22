@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fuckssh 系统架构设计</title>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --text: #1a1a1a;
+      --muted: #5c5c5c;
+      --accent: #c45c26;
+      --accent-soft: #f5ebe3;
+      --border: #e8e4df;
+      --card-bg: #fff;
+      --code-bg: #f3f1ee;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+    .toc {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 1rem;
+      font-size: 0.85rem;
+      z-index: 100;
+    }
+    .toc h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 1rem;
+    }
+    .toc a {
+      display: block;
+      color: var(--text);
+      text-decoration: none;
+      padding: 0.35rem 0;
+      border-left: 2px solid transparent;
+      padding-left: 0.75rem;
+      margin-left: -0.75rem;
+    }
+    .toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+    main {
+      margin-left: 240px;
+      max-width: 820px;
+      padding: 2.5rem 3rem 4rem;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    .meta a { color: var(--accent); }
+    h2 {
+      font-size: 1.35rem;
+      margin-top: 2.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 { font-size: 1.1rem; margin-top: 1.75rem; }
+    h4 { font-size: 1rem; color: var(--muted); margin-top: 1.25rem; }
+    p { margin: 0.75rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      background: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    th, td {
+      padding: 0.65rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th { background: var(--accent-soft); font-weight: 600; }
+    tr:nth-child(even) td { background: #fdfcfb; }
+    tr:hover td { background: var(--accent-soft); }
+    code {
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 0.88em;
+      background: var(--code-bg);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+    }
+    pre {
+      background: var(--code-bg);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+    pre code { background: none; padding: 0; }
+    .mermaid-wrap {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1.25rem 0;
+      overflow-x: auto;
+    }
+    .decision-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+    }
+    .decision-card strong { color: var(--accent); }
+    .na { color: var(--muted); font-style: italic; }
+    @media (max-width: 900px) {
+      .toc { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+      main { margin-left: 0; padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="toc">
+    <h2>目录</h2>
+    <a href="#overview">1. 架构概述</a>
+    <a href="#modules">2. 模块设计</a>
+    <a href="#dataflow">3. 数据流</a>
+    <a href="#cli">4. CLI 契约</a>
+    <a href="#domain">5. 领域模型</a>
+    <a href="#deploy">6. 部署架构</a>
+    <a href="#security">7. 安全设计</a>
+    <a href="#obs">8. 可观测性</a>
+    <a href="#fault">9. 异常容错</a>
+    <a href="#adr">10. 关键决策</a>
+    <a href="#next">11. 下一步</a>
+  </nav>
+
+  <main>
+    <h1>fuckssh 系统架构设计</h1>
+    <p class="meta">
+      版本 v1.0 · 2026-05-22<br>
+      基于 <a href="./fuckssh-PRD.md">PRD</a> · <a href="./fuckssh-技术选型.md">技术选型</a>
+    </p>
+
+    <section id="overview">
+      <h2>1. 架构概述</h2>
+      <div class="decision-card">
+        <strong>架构风格：</strong>模块化单体 CLI（Modular Monolith CLI）— 单二进制、无服务端、仅操作标准 <code>~/.ssh</code> 文件。
+      </div>
+      <p>不采用微服务、数据库或自有配置格式，以保证与 Tabby、VS Code、系统 <code>ssh</code> 互通，并控制单人项目复杂度。</p>
+
+      <h3>系统上下文</h3>
+      <div class="mermaid-wrap">
+        <pre class="mermaid">
+C4Context
+    title fuckssh 系统上下文
+    Person(user, "开发者", "管理 VPS")
+    System(fuckssh, "fuckssh CLI", "向导 / 列表 / 搜索")
+    System_Ext(files, "~/.ssh", "config 与密钥")
+    System_Ext(ssh, "系统 ssh", "日常连接")
+    System_Ext(vps, "远端 VPS", "authorized_keys")
+    Rel(user, fuckssh, "运行命令")
+    Rel(fuckssh, files, "读/写/备份")
+    Rel(fuckssh, ssh, "检测与提示")
+    Rel(fuckssh, vps, "密码模式部署公钥")
+    Rel(user, ssh, "ssh 别名")
+    Rel(ssh, files, "读取配置")
+    Rel(ssh, vps, "免密连接")
+        </pre>
+      </div>
+
+      <h3>技术栈总览</h3>
+      <table>
+        <thead><tr><th>层次</th><th>技术</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>语言</td><td>Go 1.22+</td><td>交叉编译</td></tr>
+          <tr><td>CLI</td><td>Cobra</td><td>add / list / search</td></tr>
+          <tr><td>交互</td><td>huh</td><td>向导表单</td></tr>
+          <tr><td>密钥</td><td>ed25519 + x/crypto/ssh</td><td>OpenSSH 格式</td></tr>
+          <tr><td>配置</td><td>自研受限解析</td><td>MVP 明确范围</td></tr>
+          <tr><td>发布</td><td>GoReleaser</td><td>GitHub Releases</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="modules">
+      <h2>2. 模块设计</h2>
+      <div class="mermaid-wrap">
+        <pre class="mermaid">
+graph TB
+    subgraph cmd["internal/cmd"]
+        add[add]
+        list[list]
+        search[search]
+    end
+    subgraph domain["领域层"]
+        wizard[wizard]
+        config[config]
+        keys[keys]
+        sshclient[sshclient]
+    end
+    platform[platform]
+    add --> wizard
+    list --> config
+    search --> config
+    wizard --> config & keys & sshclient
+    config & keys & sshclient --> platform
+        </pre>
+      </div>
+      <table>
+        <thead><tr><th>包</th><th>职责</th><th>边界</th></tr></thead>
+        <tbody>
+          <tr><td><code>cmd</code></td><td>Cobra 路由与 flags</td><td>无业务逻辑</td></tr>
+          <tr><td><code>wizard</code></td><td>向导编排、校验</td><td>不解析 config 细节</td></tr>
+          <tr><td><code>config</code></td><td>解析/写入/备份</td><td>MVP 不支持复杂 Match</td></tr>
+          <tr><td><code>keys</code></td><td>Ed25519 生成落盘</td><td>不建 SSH 连接</td></tr>
+          <tr><td><code>sshclient</code></td><td>检测 ssh、部署公钥</td><td>不包装长期会话</td></tr>
+          <tr><td><code>platform</code></td><td>路径与权限</td><td>无业务规则</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="dataflow">
+      <h2>3. 数据流设计</h2>
+      <h3>密码连接一站式配置</h3>
+      <div class="mermaid-wrap">
+        <pre class="mermaid">
+sequenceDiagram
+    actor U as 用户
+    participant W as wizard
+    participant K as keys
+    participant C as config
+    participant S as sshclient
+    participant V as VPS
+    U->>W: fuckssh add
+    W->>S: 检测 ssh
+    W->>C: 备份 config
+    W->>K: 生成密钥
+    W->>C: 写入 Host
+    W->>S: 部署 authorized_keys
+    S->>V: SSH 密码登录
+    W-->>U: ssh 别名
+        </pre>
+      </div>
+      <p><strong>状态：</strong>无持久运行时状态；密码仅驻内存；配置数据仅存于 <code>~/.ssh</code>。</p>
+      <p class="na"><strong>异步处理：</strong>不适用。</p>
+    </section>
+
+    <section id="cli">
+      <h2>4. CLI 命令契约</h2>
+      <p>无 HTTP API；对外契约为 Cobra 子命令。</p>
+      <table>
+        <thead><tr><th>命令</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td><code>fuckssh add</code></td><td>新 VPS 向导（密码/密钥模式）</td></tr>
+          <tr><td><code>fuckssh list</code></td><td>列出 Host 条目</td></tr>
+          <tr><td><code>fuckssh search &lt;q&gt;</code></td><td>模糊搜索 alias/hostname/IP</td></tr>
+        </tbody>
+      </table>
+      <h3>退出码</h3>
+      <table>
+        <thead><tr><th>码</th><th>含义</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>用户输入无效</td></tr>
+          <tr><td>2</td><td>config 解析失败</td></tr>
+          <tr><td>3</td><td>文件 IO 失败</td></tr>
+          <tr><td>4</td><td>远端部署失败</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="domain">
+      <h2>5. 领域与文件模型</h2>
+      <div class="mermaid-wrap">
+        <pre class="mermaid">
+erDiagram
+    SSH_CONFIG ||--|{ HOST_ENTRY : contains
+    HOST_ENTRY ||--o| IDENTITY : references
+    KEY_PAIR ||--|| IDENTITY : creates
+    HOST_ENTRY {
+        string alias
+        string hostname
+        int port
+        string user
+    }
+        </pre>
+      </div>
+      <p>搜索为内存 O(n) 子串匹配，≤60 台满足 &lt;1s 要求。无数据库。</p>
+    </section>
+
+    <section id="deploy">
+      <h2>6. 部署架构</h2>
+      <div class="mermaid-wrap">
+        <pre class="mermaid">
+flowchart LR
+    Dev[push] --> GHA[GitHub Actions]
+    GHA --> Test[go test]
+    Test --> GR[GoReleaser]
+    GR --> Bin[三平台二进制]
+    Bin --> User[用户]
+        </pre>
+      </div>
+      <p>运营成本 <strong>$0</strong>（无托管、CI 免费档）。</p>
+    </section>
+
+    <section id="security">
+      <h2>7. 安全设计</h2>
+      <ul>
+        <li>密码不持久化、不进日志</li>
+        <li>私钥 Unix 0600；Windows ACL 封装于 <code>platform</code></li>
+        <li>修改 config 前自动备份</li>
+        <li>禁止 shell 拼接；<code>exec.Command</code> 传参列表</li>
+        <li>V2 备份：口令 + AEAD，文档提示同步盘风险</li>
+      </ul>
+    </section>
+
+    <section id="obs">
+      <h2>8. 可观测性</h2>
+      <p class="na">无应用监控栈。默认 stdout 结果、stderr 错误；可选 <code>--verbose</code>。质量靠单元测试与双机冒烟。</p>
+    </section>
+
+    <section id="fault">
+      <h2>9. 异常与容错</h2>
+      <ul>
+        <li>解析错误带行号与片段</li>
+        <li>部署失败：提示备份路径，不自动删密钥</li>
+        <li>无 ssh：可完成部署后提示安装再验收</li>
+        <li>远端写 authorized_keys 可重试 1～2 次</li>
+      </ul>
+    </section>
+
+    <section id="adr">
+      <h2>10. 关键决策记录</h2>
+      <div class="decision-card"><strong>ADR-1</strong> 模块化单体 CLI — 匹配 PRD，无服务端。</div>
+      <div class="decision-card"><strong>ADR-2</strong> Go 生成密钥 — 须用 OpenSSH marshal API。</div>
+      <div class="decision-card"><strong>ADR-3</strong> 自研受限 config 解析 — MVP 控制范围。</div>
+      <div class="decision-card"><strong>ADR-4</strong> 实现顺序 list/search → 检测 → keys → add。</div>
+    </section>
+
+    <section id="next">
+      <h2>11. 下一步</h2>
+      <ol>
+        <li>确认本架构文档</li>
+        <li>scaffold 搭建 Go 脚手架</li>
+        <li>dev-phase-planner 制定 MVP 开发计划</li>
+      </ol>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });</script>
+</body>
+</html>

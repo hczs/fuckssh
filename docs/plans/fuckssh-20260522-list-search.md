@@ -15,12 +15,12 @@
 
 ## 验收标准
 
-- [ ] 在含至少 2 个 `Host` 块的 config 上运行 `fuckssh list`，stdout 显示别名、HostName、Port、User 列
-- [ ] `fuckssh search` 某台机器的 IP 片段，只输出匹配行
-- [ ] `fuckssh search` 某别名子串，大小写不敏感也能命中
-- [ ] config 含语法错误时，stderr 有文件名、行号、问题行片段，退出码非 0
-- [ ] 空 config 或无可解析 Host 时，友好提示而非 panic
-- [ ] `go test ./internal/config/...` 全部通过
+- [x] 在含至少 2 个 `Host` 块的 config 上运行 `fuckssh list`，stdout 显示别名、HostName、Port、User 列
+- [x] `fuckssh search` 某台机器的 IP 片段，只输出匹配行
+- [x] `fuckssh search` 某别名子串，大小写不敏感也能命中
+- [x] config 含语法错误时，stderr 有文件名、行号、问题行片段，退出码非 0
+- [x] 空 config 或无可解析 Host 时，友好提示而非 panic
+- [x] `go test ./internal/config/...` 全部通过
 
 ## 完成条件
 
