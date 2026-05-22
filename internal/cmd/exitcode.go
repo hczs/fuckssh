@@ -14,6 +14,9 @@ func ExitCode(err error) int {
 	if err == nil {
 		return 0
 	}
+	if errors.Is(err, sshclient.ErrSSHNotFound) {
+		return 5
+	}
 	if errors.Is(err, sshclient.ErrDeployFailed) {
 		return 4
 	}
@@ -28,7 +31,6 @@ func ExitCode(err error) int {
 	if errors.As(err, &pathErr) {
 		return 3
 	}
-	// config 包写入/备份错误均带 "config:" 前缀
 	if errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission) {
 		return 3
 	}

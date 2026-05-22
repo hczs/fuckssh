@@ -1,18 +1,19 @@
 package wizard
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/huh"
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/platform"
 )
 
 // ErrInvalidInput 表示向导收集的字段不合法（CLI 映射退出码 1）。
-var ErrInvalidInput = errors.New("wizard: 输入无效")
+var ErrInvalidInput = errors.New("wizard: invalid input")
 
 // KeyModeInput 为密钥连接模式的用户输入（可在测试中直接构造）。
 type KeyModeInput struct {
@@ -38,50 +39,10 @@ type WizardResult struct {
 
 type fileStatFunc func(name string) (os.FileInfo, error)
 
-// RunKeyMode 通过 huh 表单收集密钥连接所需字段。
+// RunKeyMode 通过堆叠表单收集密钥连接所需字段。
 func RunKeyMode() (*WizardResult, error) {
-	var in KeyModeInput
-	form := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("服务器 IP 或域名").
-				Value(&in.HostName).
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return fmt.Errorf("不能为空")
-					}
-					return nil
-				}),
-			huh.NewInput().
-				Title("SSH 用户名").
-				Value(&in.User).
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return fmt.Errorf("不能为空")
-					}
-					return nil
-				}),
-			huh.NewInput().
-				Title("私钥路径").
-				Description("已有私钥的完整路径，例如 ~/.ssh/id_ed25519").
-				Value(&in.IdentityFile).
-				Validate(func(s string) error {
-					if strings.TrimSpace(s) == "" {
-						return fmt.Errorf("不能为空")
-					}
-					return nil
-				}),
-			huh.NewInput().
-				Title("SSH 端口").
-				Placeholder("22").
-				Value(&in.Port),
-			huh.NewInput().
-				Title("Host 别名").
-				Description("回车则根据 IP/域名自动生成").
-				Value(&in.Alias),
-		),
-	)
-	if err := form.Run(); err != nil {
+	in, err := collectKeyModeInput(context.Background(), nil)
+	if err != nil {
 		return nil, err
 	}
 	return keyModeResult(in, os.Stat)
@@ -110,20 +71,20 @@ func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, err
 	in.IdentityFile = strings.TrimSpace(in.IdentityFile)
 
 	if in.HostName == "" || in.User == "" || in.IdentityFile == "" {
-		return KeyModeInput{}, fmt.Errorf("%w: 请填写 IP/域名、用户名与私钥路径", ErrInvalidInput)
+		return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillBasic))
 	}
 
 	expanded, err := platform.ExpandPath(in.IdentityFile)
 	if err != nil {
-		return KeyModeInput{}, fmt.Errorf("%w: 私钥路径: %v", ErrInvalidInput, err)
+		return KeyModeInput{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 	in.IdentityFile = expanded
 
 	if _, err := stat(in.IdentityFile); err != nil {
 		if os.IsNotExist(err) {
-			return KeyModeInput{}, fmt.Errorf("%w: 私钥不存在: %s", ErrInvalidInput, in.IdentityFile)
+			return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrKeyMissing, in.IdentityFile))
 		}
-		return KeyModeInput{}, fmt.Errorf("%w: 无法读取私钥: %v", ErrInvalidInput, err)
+		return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrKeyRead, err))
 	}
 
 	if in.Port == "" {
@@ -135,7 +96,7 @@ func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, err
 	if in.Alias == "" {
 		in.Alias = keys.SanitizeAlias(in.HostName)
 		if in.Alias == "" {
-			return KeyModeInput{}, fmt.Errorf("%w: 无法根据 HostName 生成别名", ErrInvalidInput)
+			return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrAliasGen))
 		}
 	} else {
 		in.Alias = keys.SanitizeAlias(in.Alias)

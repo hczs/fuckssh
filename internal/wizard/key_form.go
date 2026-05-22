@@ -4,23 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/keys"
+	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 )
 
-// passwordAuthTestFn 用于测试连接（单测可注入 mock）。
-type passwordAuthTestFn func(ctx context.Context, in PasswordModeInput) error
+// keyAuthTestFn 用于密钥连接测试（单测可注入 mock）。
+type keyAuthTestFn func(ctx context.Context, in KeyModeInput) error
 
-// collectPasswordModeInput 用单个堆叠表单逐项收集；已填项保留在屏幕上，密码回车后测试连接。
-func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn) (PasswordModeInput, error) {
+// collectKeyModeInput 用堆叠表单逐项收集，私钥路径校验通过后测试 SSH 连接。
+func collectKeyModeInput(ctx context.Context, testAuth keyAuthTestFn) (KeyModeInput, error) {
 	if testAuth == nil {
-		testAuth = defaultPasswordAuthTest
+		testAuth = defaultKeyAuthTest
 	}
-	var in PasswordModeInput
+	var in KeyModeInput
 	reveal := &revealState{n: 1}
 	emptyMsg := i18n.T(i18n.KeyWizardErrEmpty)
 
@@ -62,11 +64,11 @@ func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn) 
 		).WithHideFunc(hideUntilRevealed(2, reveal)),
 		huh.NewGroup(
 			huh.NewInput().
-				Title(i18n.T(i18n.KeyWizardPassword)).
-				EchoMode(huh.EchoModePassword).
-				Value(&in.Password).
-				Validate(func(password string) error {
-					if err := passwordConnectionValidate(ctx, &in, testAuth)(password); err != nil {
+				Title(i18n.T(i18n.KeyWizardIdentityFile)).
+				Description(i18n.T(i18n.KeyWizardIdentityDesc)).
+				Value(&in.IdentityFile).
+				Validate(func(path string) error {
+					if err := keyIdentityValidate(ctx, &in, testAuth)(path); err != nil {
 						return err
 					}
 					reveal.showThrough(4)
@@ -82,52 +84,61 @@ func collectPasswordModeInput(ctx context.Context, testAuth passwordAuthTestFn) 
 	).WithLayout(huh.LayoutStack)
 
 	if err := form.Run(); err != nil {
-		return PasswordModeInput{}, err
+		return KeyModeInput{}, err
 	}
 	return in, nil
 }
 
-func defaultPasswordAuthTest(ctx context.Context, in PasswordModeInput) error {
-	return sshclient.TestPasswordAuth(ctx, sshclient.DeployOpts{
-		Host:     strings.TrimSpace(in.HostName),
-		Port:     effectivePort(in.Port),
-		User:     strings.TrimSpace(in.User),
-		Password: in.Password,
+func defaultKeyAuthTest(ctx context.Context, in KeyModeInput) error {
+	expanded, err := platform.ExpandPath(strings.TrimSpace(in.IdentityFile))
+	if err != nil {
+		return err
+	}
+	return sshclient.TestKeyAuth(ctx, sshclient.KeyAuthOpts{
+		Host:         strings.TrimSpace(in.HostName),
+		Port:         effectivePort(in.Port),
+		User:         strings.TrimSpace(in.User),
+		IdentityFile: expanded,
 	})
 }
 
-func passwordConnectionValidate(ctx context.Context, in *PasswordModeInput, testAuth passwordAuthTestFn) func(string) error {
-	return func(password string) error {
-		if strings.TrimSpace(password) == "" {
+func keyIdentityValidate(ctx context.Context, in *KeyModeInput, testAuth keyAuthTestFn) func(string) error {
+	return func(path string) error {
+		if strings.TrimSpace(path) == "" {
 			return errors.New(i18n.T(i18n.KeyWizardErrEmpty))
 		}
-		in.Password = strings.TrimSpace(password)
+		in.IdentityFile = strings.TrimSpace(path)
+
+		expanded, err := platform.ExpandPath(in.IdentityFile)
+		if err != nil {
+			return err
+		}
+		if _, err := os.Stat(expanded); err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("%w: %s", ErrInvalidInput, expanded)
+			}
+			return err
+		}
+		in.IdentityFile = expanded
 
 		reportProgress(i18n.T(i18n.KeyWizardTestingConn))
-		err := testAuth(ctx, *in)
+		err = testAuth(ctx, *in)
 		if err != nil {
-			return errors.New(connectionTestFailureMessage(err))
+			return errors.New(keyConnectionTestFailureMessage(err))
 		}
 		fmt.Fprintf(progressOut, "%s\n", i18n.T(i18n.KeyWizardConnOK))
 		return nil
 	}
 }
 
-func connectionTestFailureMessage(err error) string {
-	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
-		return i18n.T(i18n.KeyWizardAuthFailed)
-	}
+func keyConnectionTestFailureMessage(err error) string {
 	if errors.Is(err, keys.ErrPassphraseNotSupported) {
 		return i18n.T(i18n.KeyWizardPassphraseNA)
+	}
+	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
+		return i18n.T(i18n.KeyWizardKeyAuthFailed)
 	}
 	msg := err.Error()
 	msg = strings.TrimPrefix(msg, "sshclient: deploy failed: ")
 	return msg
-}
-
-func effectivePort(port string) string {
-	if strings.TrimSpace(port) == "" {
-		return "22"
-	}
-	return strings.TrimSpace(port)
 }

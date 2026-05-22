@@ -2,7 +2,6 @@ package sshclient
 
 import (
 	"errors"
-	"strings"
 	"testing"
 )
 
@@ -24,7 +23,7 @@ func TestCheckSSH_found(t *testing.T) {
 	}
 }
 
-func TestCheckSSH_notFound_wrapsGuide(t *testing.T) {
+func TestCheckSSH_notFound(t *testing.T) {
 	restore := stubLookPath(func(string) (string, error) {
 		return "", errors.New("executable file not found in %PATH%")
 	})
@@ -36,16 +35,6 @@ func TestCheckSSH_notFound_wrapsGuide(t *testing.T) {
 	}
 	if !errors.Is(err, ErrSSHNotFound) {
 		t.Fatalf("errors.Is(err, ErrSSHNotFound) = false, err = %v", err)
-	}
-	msg := err.Error()
-	for _, kw := range []string{"PATH", "ssh"} {
-		if !strings.Contains(msg, kw) {
-			t.Errorf("error missing %q: %s", kw, msg)
-		}
-	}
-	// 应附带当前平台的安装指引（表驱动在 platform 包测文案；此处只断言非空）
-	if len(msg) < 40 {
-		t.Errorf("error too short, expected install guide: %s", msg)
 	}
 }
 

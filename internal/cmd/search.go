@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/fuckssh/fuckssh/internal/config"
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/spf13/cobra"
 )
 
@@ -23,15 +24,15 @@ func searchArgs(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if strings.TrimSpace(args[0]) == "" {
-		return fmt.Errorf("search: 需要非空关键词")
+		return fmt.Errorf("%s", i18n.T(i18n.KeySearchEmptyQ))
 	}
 	return nil
 }
 
-func runSearchCmd(args []string, stdout, _ io.Writer) error {
+func runSearchCmd(args []string, stdout, stderr io.Writer) error {
 	query := strings.TrimSpace(args[0])
 	if query == "" {
-		return fmt.Errorf("search: 需要非空关键词")
+		return fmt.Errorf("%s", i18n.T(i18n.KeySearchEmptyQ))
 	}
 
 	path, err := ConfigFilePath()
@@ -45,11 +46,5 @@ func runSearchCmd(args []string, stdout, _ io.Writer) error {
 	}
 
 	matched := config.FilterHosts(entries, query)
-	if len(matched) == 0 {
-		_, err = fmt.Fprintf(stdout, "未找到匹配 %q 的 Host 条目\n", query)
-		return err
-	}
-
-	_, err = fmt.Fprint(stdout, FormatHosts(matched))
-	return err
+	return WriteHostsReport(stdout, stderr, path, matched, query)
 }

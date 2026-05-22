@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,24 +29,29 @@ func TestExitCode_deployAuthFailed(t *testing.T) {
 	}
 }
 
-func TestAddCmd_warnsWhenSSHMissing(t *testing.T) {
+func TestAddCmd_abortsWhenSSHMissing(t *testing.T) {
 	restoreSSH := stubCheckSSH(func() (string, error) {
 		return "", sshclient.ErrSSHNotFound
 	})
 	defer restoreSSH()
-	restoreWizard := stubRunWizard(func(string) (*wizard.WizardResult, error) {
-		return nil, wizard.ErrInvalidInput
-	})
-	defer restoreWizard()
 
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
 	rootCmd.SetArgs([]string{"add"})
 
-	_ = rootCmd.Execute()
-	if !strings.Contains(stderr.String(), "警告") {
-		t.Errorf("stderr = %q, want warning", stderr.String())
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Fatal("Execute: want error when ssh missing")
+	}
+	if !errors.Is(err, sshclient.ErrSSHNotFound) {
+		t.Errorf("err = %v, want ErrSSHNotFound", err)
+	}
+	if got := ExitCode(err); got != 5 {
+		t.Errorf("exit code = %d, want 5", got)
+	}
+	if !strings.Contains(stderr.String(), "PATH") || !strings.Contains(stderr.String(), "ssh") {
+		t.Errorf("stderr = %q, want warning and guide", stderr.String())
 	}
 }
 
@@ -65,8 +71,8 @@ func TestAddCmd_noWarningWhenSSHPresent(t *testing.T) {
 	rootCmd.SetArgs([]string{"add"})
 
 	_ = rootCmd.Execute()
-	if strings.Contains(stderr.String(), "警告") {
-		t.Errorf("stderr should be quiet when ssh found, got: %q", stderr.String())
+	if strings.Contains(stderr.String(), "PATH") && strings.Contains(stderr.String(), "未在") {
+		t.Errorf("stderr should not contain ssh missing warning, got: %q", stderr.String())
 	}
 }
 
@@ -102,9 +108,15 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 
-	out := stdout.String()
-	if !strings.Contains(out, "ssh test-vps") {
-		t.Errorf("stdout = %q, want ssh hint", out)
+	out := strings.TrimSpace(stdout.String())
+	if out != "ssh test-vps" {
+		t.Errorf("stdout = %q, want only ssh line", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "本次已完成") {
+		t.Errorf("stderr = %q, want success summary", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "Host Key") {
+		t.Errorf("stderr = %q, want host key notice", stderr.String())
 	}
 
 	entries, err := config.ParseFile(cfg)
@@ -154,13 +166,15 @@ func TestAdd_passwordMode_integrationSkipsSecondBackup(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 
-	if !strings.Contains(stdout.String(), "ssh pw-vps") {
-		t.Errorf("stdout = %q, want ssh hint", stdout.String())
+	if strings.TrimSpace(stdout.String()) != "ssh pw-vps" {
+		t.Errorf("stdout = %q, want only ssh line", stdout.String())
 	}
 	if !strings.Contains(stderr.String(), "本次已完成") {
 		t.Errorf("stderr = %q, want success summary", stderr.String())
 	}
-	// 密码模式已在向导内写入，不应产生第二个备份文件。
+	if !strings.Contains(stderr.String(), "Host Key") {
+		t.Errorf("stderr = %q, want host key notice", stderr.String())
+	}
 	matches, _ := filepath.Glob(filepath.Join(dir, "config.fuckssh.bak.*"))
 	if len(matches) > 0 {
 		t.Errorf("unexpected extra backup files: %v", matches)

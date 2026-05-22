@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/charmbracelet/huh"
+	"github.com/fuckssh/fuckssh/internal/i18n"
 )
 
 // ConnectionMode 表示 add 向导的连接方式。
@@ -18,14 +19,14 @@ const (
 // Run 编排 add 向导：选择模式后进入对应流程。
 // configPath 写入密码模式使用的 ssh config（密钥模式由 cmd 层追加）。
 func Run(configPath string) (*WizardResult, error) {
-	var mode ConnectionMode
+	var mode ConnectionMode = ModePassword
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[ConnectionMode]().
-				Title("连接方式").
+				Title(i18n.T(i18n.KeyWizardConnModeTitle)).
 				Options(
-					huh.NewOption("密钥连接（已有私钥，仅写 config）", ModeKey),
-					huh.NewOption("密码连接（生成密钥并部署公钥）", ModePassword),
+					huh.NewOption(i18n.T(i18n.KeyWizardModePassword), ModePassword),
+					huh.NewOption(i18n.T(i18n.KeyWizardModeKey), ModeKey),
 				).
 				Value(&mode),
 		),
@@ -48,6 +49,6 @@ func Run(configPath string) (*WizardResult, error) {
 		}
 		return result, nil
 	default:
-		return nil, errors.New("wizard: 未知连接方式")
+		return nil, errors.New("wizard: unknown connection mode")
 	}
 }

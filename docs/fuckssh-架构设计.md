@@ -283,7 +283,7 @@ flowchart LR
 | 解析 config 失败 | 文件名、行号、片段 | 2 |
 | 密钥/文件 IO 失败 | 路径 + 权限提示 | 3 |
 | 远端部署失败 | 原因 + 已备份 config 路径 | 4 |
-| 未检测到 ssh | 警告 + 继续或中止（实现定） | 0 或 5 |
+| 未检测到 ssh（`add`） | stderr 警告 + 分平台安装指引，**终止** | 5 |
 
 错误类型用 `errors.Is` / 自定义 `ErrKind` 区分，CLI 层映射为文案与退出码。
 
@@ -347,6 +347,7 @@ type HostEntry struct {
 | 公钥 | `~/.ssh/*.pub` | `authorized_keys` 行格式 |
 | 修改前备份 | `~/.ssh/config.fuckssh.bak.<timestamp>` | 原文件拷贝 |
 | V2 备份包 | 用户指定目录 | 加密归档（自定义 manifest） |
+| 界面语言（工具偏好） | `~/.config/fuckssh/settings.json`（Win: `%APPDATA%\fuckssh\`） | JSON `{"lang":"zh"\|"en"}`；首次交互运行选择，可用 `FUCKSSH_LANG` 覆盖 |
 
 ---
 
@@ -443,8 +444,10 @@ jobs:
 
 | 级别 | 用途 | 输出 |
 |------|------|------|
-| 默认 | 仅结果表格或成功提示 | stdout |
-| 错误 | 用户可读中文 + 技术细节（无密钥） | stderr |
+| 默认 | `list`/`search` 表格；`add` 成功时 stdout 仅 `ssh <别名>` 一行 | stdout |
+| 进度与摘要 | 向导步骤、`add` 操作清单与安全提示 | stderr |
+| 元信息 | `list`/`search` 的 config 路径与主机计数 | stderr |
+| 错误 | 用户可读文案（随语言设置中/英）+ 技术细节（无密钥） | stderr |
 | `--verbose` | 步骤级进度（解析块数、连接阶段） | stderr |
 
 **不引入** ELK / Prometheus；可选未来 `FUCKSSH_DEBUG=1` 环境变量。

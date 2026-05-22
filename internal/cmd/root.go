@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/spf13/cobra"
 )
@@ -29,9 +30,23 @@ func ConfigFilePath() (string, error) {
 }
 
 func init() {
+	rootCmd.PersistentPreRunE = rootPersistentPreRun
 	rootCmd.PersistentFlags().StringVar(&configFileFlag, "config", "", "path to ssh config file (default: ~/.ssh/config)")
 
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(searchCmd)
+}
+
+func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
+	if cmd.Flags().Changed("help") {
+		_, _ = i18n.Load()
+		applyLocalizedHelp()
+		return nil
+	}
+	if err := i18n.EnsureInteractive(cmd.ErrOrStderr()); err != nil {
+		return err
+	}
+	applyLocalizedHelp()
+	return nil
 }

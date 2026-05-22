@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/fuckssh/fuckssh/internal/config"
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 	"github.com/fuckssh/fuckssh/internal/wizard"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ var addCmd = &cobra.Command{
 }
 
 func runAdd(stdout, stderr io.Writer) error {
-	if err := warnIfSSHMissing(stderr); err != nil {
+	if err := requireSSH(stderr); err != nil {
 		return err
 	}
 
@@ -76,8 +77,7 @@ func runAdd(stdout, stderr io.Writer) error {
 
 func printAddSuccess(stdout, stderr io.Writer, configPath string, result *wizard.WizardResult) {
 	wizard.WriteAddSuccessSummary(stderr, result, configPath)
-	fmt.Fprintf(stdout, "配置已写入 %s\n", configPath)
-	fmt.Fprintf(stdout, "现在可以执行: ssh %s\n", result.Alias)
+	fmt.Fprintf(stdout, "ssh %s\n", result.Alias)
 }
 
 func configFileExists(path string) bool {
@@ -85,15 +85,15 @@ func configFileExists(path string) bool {
 	return err == nil
 }
 
-// warnIfSSHMissing 检测系统 ssh；缺失时打印指引但不阻止后续流程。
-func warnIfSSHMissing(stderr io.Writer) error {
+// requireSSH 检测系统 ssh；缺失时输出警告与安装指引并终止。
+func requireSSH(stderr io.Writer) error {
 	_, err := checkSSHFn()
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, sshclient.ErrSSHNotFound) {
-		fmt.Fprintf(stderr, "警告: 未在 PATH 中找到 ssh 客户端\n%v\n", err)
-		return nil
+		fmt.Fprintf(stderr, "%s\n%s\n", i18n.T(i18n.KeySSHMissingWarning), i18n.InstallOpenSSHGuide())
+		return err
 	}
 	return err
 }
