@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/fuckssh/fuckssh/internal/config"
+	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 	"github.com/fuckssh/fuckssh/internal/wizard"
 )
@@ -76,8 +78,18 @@ func TestAddCmd_noWarningWhenSSHPresent(t *testing.T) {
 	}
 }
 
+func setTestHome(t *testing.T, dir string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", dir)
+	} else {
+		t.Setenv("HOME", dir)
+	}
+}
+
 func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	key := filepath.Join(dir, "id_ed25519")
 	if err := os.WriteFile(key, []byte("fake-key"), 0o600); err != nil {
@@ -130,8 +142,17 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 	if e.Alias != "test-vps" || e.HostName != "203.0.113.50" || e.User != "ubuntu" {
 		t.Errorf("entry = %+v", e)
 	}
-	if e.IdentityFile != key {
-		t.Errorf("IdentityFile = %q, want %q", e.IdentityFile, key)
+	privName, _ := keys.KeyPaths("test-vps")
+	wantIdentity := ".ssh/keys/" + privName
+	if e.IdentityFile != wantIdentity {
+		t.Errorf("IdentityFile = %q, want %q", e.IdentityFile, wantIdentity)
+	}
+	copied := filepath.Join(dir, ".ssh", "keys", privName)
+	if _, err := os.Stat(copied); err != nil {
+		t.Errorf("copied key missing at %q: %v", copied, err)
+	}
+	if _, err := os.Stat(key); err != nil {
+		t.Errorf("source key should remain: %v", err)
 	}
 }
 

@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/fuckssh/fuckssh/internal/config"
 	"github.com/fuckssh/fuckssh/internal/i18n"
+	"github.com/fuckssh/fuckssh/internal/keys"
+	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 	"github.com/fuckssh/fuckssh/internal/wizard"
 	"github.com/mattn/go-isatty"
@@ -59,21 +62,63 @@ func runAdd(stdout, stderr io.Writer) error {
 		return err
 	}
 
+	destPriv, copied, err := stageKeyForConfig(result.Alias, result.IdentityFile)
+	if err != nil {
+		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, false)
+		return err
+	}
+
+	identityRef, err := platform.IdentityFileRef(destPriv)
+	if err != nil {
+		if copied {
+			_ = keys.RemoveKeyPair(destPriv)
+		}
+		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, false)
+		return err
+	}
+
 	entry := config.HostEntry{
 		Alias:        result.Alias,
 		HostName:     result.HostName,
 		User:         result.User,
 		Port:         result.Port,
-		IdentityFile: result.IdentityFile,
+		IdentityFile: identityRef,
 	}
 	if err := config.AppendHost(configPath, entry); err != nil {
 		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, true)
+		if copied {
+			_ = keys.RemoveKeyPair(destPriv)
+		}
 		return err
 	}
 
 	result.BackupPath = bakPath
+	result.IdentityFile = identityRef
 	printAddSuccess(stdout, stderr, configPath, result)
 	return nil
+}
+
+// stageKeyForConfig 将用户私钥复制到 ~/.ssh/keys/（若尚未在该路径），返回落盘绝对路径与是否新复制。
+func stageKeyForConfig(alias, srcPriv string) (destPriv string, copied bool, err error) {
+	keysDir, err := platform.KeysDir()
+	if err != nil {
+		return "", false, err
+	}
+	if err := os.MkdirAll(keysDir, 0o700); err != nil {
+		return "", false, err
+	}
+
+	privName, _ := keys.KeyPaths(alias)
+	destPriv = filepath.Join(keysDir, privName)
+	if filepath.Clean(srcPriv) == filepath.Clean(destPriv) {
+		return destPriv, false, nil
+	}
+
+	destPriv, err = keys.CopyKeyPair(srcPriv, keysDir, privName)
+	if err != nil {
+		return "", false, err
+	}
+	return destPriv, true, nil
 }
 
 func printAddSuccess(stdout, stderr io.Writer, configPath string, result *wizard.WizardResult) {

@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/fuckssh/fuckssh/internal/platform"
 )
 
-// Backup 在 config 同目录创建带时间戳的备份副本。
+// Backup 在 ~/.ssh/backup/ 创建带时间戳的 config 备份副本，并修剪为最近 20 份。
 //
-// 命名：config.fuckssh.bak.<timestamp>（与架构 §5.4 一致）。
+// 命名：config.fuckssh.bak.<timestamp>
 func Backup(path string) (bakPath string, err error) {
 	src, err := os.Open(path)
 	if err != nil {
@@ -22,10 +24,17 @@ func Backup(path string) (bakPath string, err error) {
 	}
 	defer src.Close()
 
-	dir := filepath.Dir(path)
+	backupDir, err := platform.BackupDir()
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(backupDir, 0o700); err != nil {
+		return "", fmt.Errorf("config: mkdir backup dir %q: %w", backupDir, err)
+	}
+
 	base := filepath.Base(path)
 	ts := time.Now().UTC().Format("20060102T150405Z")
-	bakPath = filepath.Join(dir, base+".fuckssh.bak."+ts)
+	bakPath = filepath.Join(backupDir, base+".fuckssh.bak."+ts)
 
 	dst, err := os.OpenFile(bakPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
@@ -35,6 +44,9 @@ func Backup(path string) (bakPath string, err error) {
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return "", fmt.Errorf("config: write backup: %w", err)
+	}
+	if err := PruneBackups(backupDir, defaultBackupKeep); err != nil {
+		return "", err
 	}
 	return bakPath, nil
 }

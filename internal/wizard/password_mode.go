@@ -96,16 +96,17 @@ func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
 	}
 	return passwordFlowDeps{
 		backup: config.Backup,
-		writeKeys: func(dir, alias string) (string, string, error) {
+		writeKeys: func(sshDir, alias string) (string, string, error) {
 			kp, err := keys.GenerateEd25519()
 			if err != nil {
 				return "", "", err
 			}
 			privName, _ := keys.KeyPaths(alias)
-			if err := keys.WriteKeyPair(dir, privName, kp); err != nil {
+			keysDir := filepath.Join(sshDir, "keys")
+			if err := keys.WriteKeyPair(keysDir, privName, kp); err != nil {
 				return "", "", err
 			}
-			return filepath.Join(dir, privName), kp.PublicLine, nil
+			return filepath.Join(keysDir, privName), kp.PublicLine, nil
 		},
 		appendHost: config.AppendHost,
 		deploy:     sshclient.DeployPublicKey,
@@ -163,7 +164,7 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 	if err != nil {
 		return state, err
 	}
-	if err := ensureSSHDir(sshDir); err != nil {
+	if err := ensureSSHLayout(sshDir); err != nil {
 		return state, err
 	}
 
@@ -180,12 +181,16 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 	}
 
 	progress("正在写入 SSH config…")
+	identityRef, err := platform.IdentityFileRef(privPath)
+	if err != nil {
+		return state, err
+	}
 	entry := config.HostEntry{
 		Alias:        in.Alias,
 		HostName:     in.HostName,
 		User:         in.User,
 		Port:         in.Port,
-		IdentityFile: privPath,
+		IdentityFile: identityRef,
 	}
 	if err := deps.appendHost(configPath, entry); err != nil {
 		return state, err
@@ -232,12 +237,16 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 		rollbackPasswordChanges(configPath, setup)
 		return nil, setup.bakPath, formatPasswordDeployError(err, setup.bakPath, true)
 	}
+	identityRef, err := platform.IdentityFileRef(setup.privPath)
+	if err != nil {
+		return nil, setup.bakPath, err
+	}
 	return &WizardResult{
 		Alias:                in.Alias,
 		HostName:             in.HostName,
 		User:                 in.User,
 		Port:                 in.Port,
-		IdentityFile:         setup.privPath,
+		IdentityFile:         identityRef,
 		BackupPath:           setup.bakPath,
 		PasswordFlowComplete: true,
 	}, setup.bakPath, nil
@@ -315,9 +324,12 @@ func nonEmpty(msg string) func(string) error {
 	}
 }
 
-func ensureSSHDir(dir string) error {
+func ensureSSHLayout(dir string) error {
 	// 0700：仅用户可访问，符合 OpenSSH 惯例。
-	return os.MkdirAll(dir, 0o700)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	return os.MkdirAll(filepath.Join(dir, "keys"), 0o700)
 }
 
 func configFileExists(path string) bool {

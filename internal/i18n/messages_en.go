@@ -85,11 +85,11 @@ var messagesEN = map[string]string{
 	KeySummaryHeadline:    "Done! Run:",
 	KeySummaryReadyHint:   "(key-based login; no password needed)",
 	KeySummaryListHint:    "Run fuckssh list to see all hosts",
-	KeySummaryBackup:      "  · Backed up SSH config to %s\n",
+	KeySummaryBackup:      "  · Backed up your original SSH config to %s\n",
 	KeySummaryKeygen:      "  · Generated Ed25519 key: %s\n",
 	KeySummaryHostWritten: "  · Wrote Host %s to %s\n",
 	KeySummaryDeployed:    "  · Deployed public key to remote ~/.ssh/authorized_keys\n",
-	KeySummaryExistingKey: "  · Using existing private key: %s\n",
+	KeySummaryExistingKey: "  · Copied private key to keys/: %s\n",
 	KeySummaryHostKey:     "  · Security: Host Key is not verified yet (MITM risk). known_hosts support is planned.\n",
 	KeySummaryNextStep:    "Config written to %s. Run: ssh %s\n",
 

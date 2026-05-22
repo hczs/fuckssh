@@ -85,11 +85,11 @@ var messagesZH = map[string]string{
 	KeySummaryHeadline:    "完成！接下来请执行：",
 	KeySummaryReadyHint:   "（已配置密钥，无需再输入密码）",
 	KeySummaryListHint:    "运行 fuckssh list 可查看全部主机",
-	KeySummaryBackup:      "  · 已备份 SSH config 至 %s\n",
+	KeySummaryBackup:      "  · 已帮你备份原有 SSH config 至 %s\n",
 	KeySummaryKeygen:      "  · 已生成 Ed25519 密钥：%s\n",
 	KeySummaryHostWritten: "  · 已写入 Host %s 到 %s\n",
 	KeySummaryDeployed:    "  · 公钥已部署到远端 ~/.ssh/authorized_keys\n",
-	KeySummaryExistingKey: "  · 使用已有私钥：%s\n",
+	KeySummaryExistingKey: "  · 已将私钥复制到 keys 目录：%s\n",
 	KeySummaryHostKey:     "  · 安全提示：当前未校验服务器 Host Key（存在中间人攻击风险），后续版本将支持 known_hosts 校验。\n",
 	KeySummaryNextStep:    "配置已写入 %s，现在可以执行: ssh %s\n",
 
