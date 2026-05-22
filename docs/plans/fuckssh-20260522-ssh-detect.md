@@ -2,9 +2,9 @@
 
 ## 当前进度
 
-- [ ] Task 1: platform 包 — 分平台安装指引常量
-- [ ] Task 2: sshclient 包 — LookPath 检测与结构化错误
-- [ ] Task 3: 集成到 add 前置检查（list/search 可选警告）
+- [x] Task 1: platform 包 — 分平台安装指引常量
+- [x] Task 2: sshclient 包 — LookPath 检测与结构化错误
+- [x] Task 3: 集成到 add 前置检查（list/search 可选警告）
 
 > 从第一个 `[ ]` 开始执行。完成后将 `[ ]` 改为 `[x]`。
 
@@ -14,10 +14,10 @@
 
 ## 验收标准
 
-- [ ] PATH 中有 `ssh` 时，检测通过且无警告（或仅 verbose 提示路径）
-- [ ] 模拟无 `ssh`（改 PATH 或 mock）时，stderr 出现当前 OS 对应的安装说明（Windows 需提到「可选功能」）
-- [ ] `fuckssh add` 在检测失败时：给出指引后**仍可继续**向导（密码部署不依赖系统 ssh；见架构 §9.2）
-- [ ] `go test ./internal/sshclient/...` 全部通过
+- [x] PATH 中有 `ssh` 时，检测通过且无警告（或仅 verbose 提示路径）
+- [x] 模拟无 `ssh`（改 PATH 或 mock）时，stderr 出现当前 OS 对应的安装说明（Windows 需提到「可选功能」）
+- [x] `fuckssh add` 在检测失败时：给出指引后**仍可继续**向导（密码部署不依赖系统 ssh；见架构 §9.2）
+- [x] `go test ./internal/sshclient/...` 全部通过
 
 ## 完成条件
 
