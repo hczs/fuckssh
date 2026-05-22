@@ -4,7 +4,7 @@
 
 - [x] Task 1: config 包 — 修改前备份与追加 Host 块
 - [x] Task 2: wizard 包 — huh 表单与密钥模式流程
-- [ ] Task 3: add 子命令 — 串联向导与成功提示
+- [x] Task 3: add 子命令 — 串联向导与成功提示
 
 > 从第一个 `[ ]` 开始执行。完成后将 `[ ]` 改为 `[x]`。
 
@@ -18,7 +18,7 @@
 - [ ] 执行前生成 `~/.ssh/config.fuckssh.bak.<timestamp>`
 - [ ] config 末尾出现正确 `Host` / `HostName` / `User` / `Port` / `IdentityFile`
 - [ ] 私钥路径不存在时，向导内报错且不写 config
-- [ ] 同名 `Host` 已存在时，提示覆盖或中止（实现一种并文档化）
+- [x] 同名 `Host` 已存在时，提示覆盖或中止（**实现：中止写入**并提示换别名或手动编辑）
 - [ ] 完成后 stdout 提示：`ssh <别名>` 进行连接
 - [ ] 在已能用该钥登录的 VPS 上，手动 `ssh <别名>` 成功
 
