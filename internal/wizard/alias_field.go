@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/fuckssh/fuckssh/internal/keys"
 )
 
 // aliasField 在别名输入行下方内联展示校验错误（与密码字段一致，避免 WithShowErrors(false) 吞掉提示）。
@@ -101,7 +102,9 @@ func (f *aliasField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return f, nil
 			}
 			f.inlineMsg = ""
-			f.accessor.Set(raw)
+			normalized := keys.NormalizeHostAlias(raw)
+			f.textinput.SetValue(normalized)
+			f.accessor.Set(normalized)
 			return f, huh.NextField
 		default:
 			// 用户修改输入时清除旧错误。

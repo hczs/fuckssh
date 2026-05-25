@@ -24,6 +24,9 @@ var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add a VPS host via interactive wizard",
 	Long:  "Run the interactive wizard to generate keys, update ssh config, and optionally deploy a public key.",
+	// 向导内 Ctrl+C 由 executeWithArgs 输出单行取消提示，不附带 usage。
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runAdd(cmd.OutOrStdout(), cmd.ErrOrStderr())
 	},

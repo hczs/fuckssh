@@ -47,9 +47,9 @@ func buildKeyConfirmSummary(in KeyModeInput, configPath string) string {
 
 func confirmAlias(alias, hostName string) string {
 	if a := strings.TrimSpace(alias); a != "" {
-		return keys.SanitizeAlias(a)
+		return keys.NormalizeHostAlias(a)
 	}
-	return keys.SanitizeAlias(hostName)
+	return keys.NormalizeHostAlias(hostName)
 }
 
 func runConfirmForm(summary string) error {

@@ -19,7 +19,7 @@ func stepTitle(step int, labelKey string) string {
 // aliasDescription 根据已填 HostName 生成别名说明（含预览）。
 func aliasDescription(hostName *string) string {
 	base := i18n.T(i18n.KeyWizardAliasDesc)
-	if preview := keys.SanitizeAlias(strings.TrimSpace(*hostName)); preview != "" {
+	if preview := keys.NormalizeHostAlias(strings.TrimSpace(*hostName)); preview != "" {
 		return base + "\n" + i18n.T(i18n.KeyWizardAliasPreview, preview)
 	}
 	return base

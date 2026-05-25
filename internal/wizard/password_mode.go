@@ -54,7 +54,7 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 	for {
 		in, err := collectPasswordModeInput(ctx, configPath, nil, &draft)
 		if err != nil {
-			return nil, "", err
+			return nil, "", mapWizardAbort(err)
 		}
 		draft = in
 
@@ -70,7 +70,7 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 				draft = final
 				continue
 			}
-			return nil, "", err
+			return nil, "", mapWizardAbort(err)
 		}
 		break
 	}
@@ -299,12 +299,12 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 	}
 
 	if in.Alias == "" {
-		in.Alias = keys.SanitizeAlias(in.HostName)
+		in.Alias = keys.NormalizeHostAlias(in.HostName)
 		if in.Alias == "" {
 			return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrAliasFromHost))
 		}
 	} else {
-		in.Alias = keys.SanitizeAlias(in.Alias)
+		in.Alias = keys.NormalizeHostAlias(in.Alias)
 	}
 
 	if in.Algorithm == "" {

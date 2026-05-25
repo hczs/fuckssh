@@ -61,8 +61,8 @@ func TestKeyMode_generatesAliasWhenEmpty(t *testing.T) {
 	if out.Alias == "" {
 		t.Fatal("Alias should be generated from HostName")
 	}
-	if out.Alias != "203_0_113_10" {
-		t.Errorf("Alias = %q, want 203_0_113_10", out.Alias)
+	if out.Alias != "203-0-113-10" {
+		t.Errorf("Alias = %q, want 203-0-113-10", out.Alias)
 	}
 }
 

@@ -20,6 +20,9 @@ coverage.html
 # Go
 vendor/
 
+# CodeGraph (local index, per machine)
+.codegraph/
+
 # IDE
 .idea/
 .vscode/

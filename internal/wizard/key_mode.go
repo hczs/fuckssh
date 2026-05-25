@@ -50,7 +50,7 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 	for {
 		in, err := collectKeyModeInput(context.Background(), configPath, nil, &draft)
 		if err != nil {
-			return nil, err
+			return nil, mapWizardAbort(err)
 		}
 		draft = in
 
@@ -64,7 +64,7 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 				draft = out
 				continue
 			}
-			return nil, err
+			return nil, mapWizardAbort(err)
 		}
 		break
 	}
@@ -110,12 +110,12 @@ func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, err
 		return KeyModeInput{}, err
 	}
 	if in.Alias == "" {
-		in.Alias = keys.SanitizeAlias(in.HostName)
+		in.Alias = keys.NormalizeHostAlias(in.HostName)
 		if in.Alias == "" {
 			return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrAliasGen))
 		}
 	} else {
-		in.Alias = keys.SanitizeAlias(in.Alias)
+		in.Alias = keys.NormalizeHostAlias(in.Alias)
 	}
 
 	return in, nil

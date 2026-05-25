@@ -8,6 +8,25 @@ import (
 	"testing"
 )
 
+func TestNormalizeHostAlias_examples(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{"my_vps", "my-vps"},
+		{"_edge_", "edge"},
+		{"10.0.0.1", "10-0-0-1"},
+		{"PROD-CN-WEB-01", "prod-cn-web-01"},
+		{"my--vps", "my-vps"},
+		{"", ""},
+	}
+	for _, tc := range tests {
+		got := NormalizeHostAlias(tc.in)
+		if got != tc.want {
+			t.Errorf("NormalizeHostAlias(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestKeyPaths_sanitizesInvalidChars(t *testing.T) {
 	priv, pub := KeyPaths("my/../vps!")
 
@@ -18,7 +37,7 @@ func TestKeyPaths_sanitizesInvalidChars(t *testing.T) {
 		t.Fatalf("priv path contains ..: %q", priv)
 	}
 
-	wantBase := "id_ed25519_fuckssh_my_vps"
+	wantBase := "id_ed25519_fuckssh_my-vps"
 	if priv != wantBase {
 		t.Errorf("priv = %q, want %q", priv, wantBase)
 	}

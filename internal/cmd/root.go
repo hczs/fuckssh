@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/platform"
+	"github.com/fuckssh/fuckssh/internal/wizard"
 	"github.com/spf13/cobra"
 )
 
@@ -63,11 +65,30 @@ func executeWithArgs(args []string) error {
 	rootCmd.SetArgs(args)
 	start := time.Now()
 	err := rootCmd.Execute()
+	if err != nil {
+		printCommandError(rootCmd, args, err)
+	}
 	if !helpInArgs(runArgs) {
 		printCmdElapsed(rootCmd.ErrOrStderr(), time.Since(start))
 	}
 	resetHelpFlags(rootCmd)
 	return err
+}
+
+// printCommandError 输出 RunE 失败信息；add 子命令取消时仅一行友好提示。
+func printCommandError(root *cobra.Command, args []string, err error) {
+	cmd, _, findErr := root.Find(args)
+	if findErr != nil {
+		cmd = root
+	}
+	w := cmd.ErrOrStderr()
+	if wizard.IsCancelled(err) {
+		_, _ = fmt.Fprintln(w, wizard.CancelMessage(err))
+		return
+	}
+	if cmd.SilenceErrors || root.SilenceErrors {
+		_, _ = fmt.Fprintln(w, cmd.ErrPrefix(), err.Error())
+	}
 }
 
 // ConfigFilePath 返回当前应读取的 ssh config 路径（优先 --config）。

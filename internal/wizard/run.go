@@ -3,7 +3,6 @@ package wizard
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -70,13 +69,3 @@ func modeKeyLabel() string {
 	return i18n.T(i18n.KeyWizardModeKey) + "\n  " + i18n.T(i18n.KeyWizardModeKeySub)
 }
 
-// mapWizardAbort 将用户取消/返回修改映射为统一提示（仍返回原始错误供退出码判断）。
-func mapWizardAbort(err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, huh.ErrUserAborted) || errors.Is(err, ErrWizardRetryForm) {
-		return fmt.Errorf("%s: %w", i18n.T(i18n.KeyWizardCancelled), err)
-	}
-	return err
-}

@@ -20,14 +20,14 @@ func TestBuildPasswordConfirmSummary_noMangledPath(t *testing.T) {
 		HostName: "10.12.2.220",
 		User:     "boco",
 		Port:     "22",
-		Alias:    "10_12_2_220",
+		Alias:    "10_12_2_220", // 确认页展示规范化后的连字符别名
 	}, `C:\Users\hczs8\.ssh\config`)
 
 	if strings.Contains(s, "Host 220 →") {
 		t.Errorf("summary should not use ambiguous Host arrow format: %q", s)
 	}
-	if !strings.Contains(s, "10_12_2_220") {
-		t.Errorf("summary should include full alias: %q", s)
+	if !strings.Contains(s, "10-12-2-220") {
+		t.Errorf("summary should include normalized alias: %q", s)
 	}
 	if !strings.Contains(s, "C:/Users/hczs8/.ssh/config") {
 		t.Errorf("summary should include safe config path: %q", s)

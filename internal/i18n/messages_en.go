@@ -36,7 +36,7 @@ var messagesEN = map[string]string{
 	KeyWizardIdentityFile:      "Private key path",
 	KeyWizardIdentityDesc:      "Full path, e.g. ~/.ssh/id_ed25519; tests login without uploading the key",
 	KeyWizardAlias:             "Host alias",
-	KeyWizardAliasDesc:         "Press Enter to auto-generate from IP/hostname",
+	KeyWizardAliasDesc:         "Use lowercase letters and hyphens (e.g. prod-cn-web-01, my-vps); _ and . become -\nPress Enter to auto-generate from IP/hostname",
 	KeyWizardAliasPreview:      "Will use alias: %s",
 	KeyWizardHostKeyHint:       "Note: server Host Key is not verified yet (planned for a later release)",
 	KeyWizardErrEmpty:          "cannot be empty",

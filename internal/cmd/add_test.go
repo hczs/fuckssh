@@ -55,6 +55,37 @@ func TestAddCmd_abortsWhenSSHMissing(t *testing.T) {
 	}
 }
 
+func TestAddCmd_userCancelNoUsage(t *testing.T) {
+	restoreSSH := stubCheckSSH(func() (string, error) {
+		return "/usr/bin/ssh", nil
+	})
+	defer restoreSSH()
+	restoreWizard := stubRunWizard(func(string) (*wizard.WizardResult, error) {
+		return nil, wizard.UserCancelled()
+	})
+	defer restoreWizard()
+
+	var stdout, stderr bytes.Buffer
+	rootCmd.SetOut(&stdout)
+	rootCmd.SetErr(&stderr)
+	err := ExecuteWithArgs([]string{"add"})
+	if err == nil {
+		t.Fatal("want cancel error")
+	}
+	if !wizard.IsCancelled(err) {
+		t.Fatalf("err = %v, want cancelled", err)
+	}
+	out := stderr.String()
+	if !strings.Contains(out, "已取消") {
+		t.Errorf("stderr = %q, want cancel message", out)
+	}
+	for _, forbidden := range []string{"Usage:", "add [flags]", "Flags:"} {
+		if strings.Contains(out, forbidden) {
+			t.Errorf("stderr should not contain help %q, got: %q", forbidden, out)
+		}
+	}
+}
+
 func TestAddCmd_noWarningWhenSSHPresent(t *testing.T) {
 	restoreSSH := stubCheckSSH(func() (string, error) {
 		return "/usr/bin/ssh", nil

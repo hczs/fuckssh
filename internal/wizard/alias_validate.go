@@ -14,9 +14,9 @@ import (
 func resolveAliasCandidate(raw, hostName string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return keys.SanitizeAlias(hostName)
+		return keys.NormalizeHostAlias(hostName)
 	}
-	return keys.SanitizeAlias(raw)
+	return keys.NormalizeHostAlias(raw)
 }
 
 // aliasFieldValidate 在别名步骤内联校验冲突（避免确认后再弹第二层表单）。

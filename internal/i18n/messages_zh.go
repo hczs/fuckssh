@@ -36,7 +36,7 @@ var messagesZH = map[string]string{
 	KeyWizardIdentityFile:      "私钥路径",
 	KeyWizardIdentityDesc:      "完整路径，例如 ~/.ssh/id_ed25519；将测试登录，不会上传私钥内容",
 	KeyWizardAlias:             "Host 别名",
-	KeyWizardAliasDesc:         "回车则根据 IP/域名自动生成",
+	KeyWizardAliasDesc:         "小写字母 + 连字符 - 分词（如 prod-cn-web-01、my-vps）；输入 _ 或 . 会自动转为 -\n回车则根据 IP/域名自动生成",
 	KeyWizardAliasPreview:      "将生成别名: %s",
 	KeyWizardHostKeyHint:       "提示: 当前不校验服务器 Host Key（后续版本将支持）",
 	KeyWizardErrEmpty:          "不能为空",

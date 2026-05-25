@@ -13,12 +13,10 @@ const keyNamePrefix = "id_ed25519_fuckssh_"
 // KeyPaths 根据 Host 别名返回私钥与公钥的**文件名**（不含目录）。
 //
 // 命名规则（与架构 §2.2.4 一致）：
-//   - 有别名：id_ed25519_fuckssh_<sanitized_alias>
+//   - 有别名：id_ed25519_fuckssh_<normalized_alias>
 //   - 别名为空：id_ed25519_fuckssh_<hostname 的 SHA256 前 4 字节十六进制>
-//
-// sanitize 仅保留字母、数字、连字符与下划线，其余字符替换为下划线，避免出现路径穿越字符。
 func KeyPaths(alias string) (priv, pub string) {
-	base := sanitizeAlias(alias)
+	base := NormalizeHostAlias(alias)
 	if base == "" {
 		base = defaultAliasSuffix()
 	}
@@ -27,12 +25,9 @@ func KeyPaths(alias string) (priv, pub string) {
 	return priv, pub
 }
 
-// SanitizeAlias 将 Host 别名规范为安全文件名片段（字母数字、连字符、下划线）。
-func SanitizeAlias(alias string) string {
-	return sanitizeAlias(alias)
-}
-
-func sanitizeAlias(alias string) string {
+// NormalizeHostAlias 将用户输入规范为 SSH Host 别名：小写字母、数字与连字符。
+// 点号与下划线会转为连字符；非法字符同样转为连字符；连续连字符合并并去掉首尾连字符。
+func NormalizeHostAlias(alias string) string {
 	alias = strings.TrimSpace(alias)
 	if alias == "" {
 		return ""
@@ -41,17 +36,26 @@ func sanitizeAlias(alias string) string {
 	var b strings.Builder
 	for _, r := range alias {
 		switch {
-		case unicode.IsLetter(r), unicode.IsDigit(r), r == '-', r == '_':
+		case unicode.IsLetter(r):
+			b.WriteRune(unicode.ToLower(r))
+		case unicode.IsDigit(r), r == '-':
 			b.WriteRune(r)
+		case r == '.', r == '_':
+			b.WriteRune('-')
 		default:
-			b.WriteRune('_')
+			b.WriteRune('-')
 		}
 	}
 	s := b.String()
-	for strings.Contains(s, "__") {
-		s = strings.ReplaceAll(s, "__", "_")
+	for strings.Contains(s, "--") {
+		s = strings.ReplaceAll(s, "--", "-")
 	}
-	return strings.Trim(s, "_")
+	return strings.Trim(s, "-")
+}
+
+// SanitizeAlias 与 NormalizeHostAlias 相同，保留旧名供调用方过渡。
+func SanitizeAlias(alias string) string {
+	return NormalizeHostAlias(alias)
 }
 
 func defaultAliasSuffix() string {
