@@ -78,11 +78,10 @@ func collectPasswordModeInput(ctx context.Context, configPath string, testAuth p
 				Value(&in.Password),
 		).WithHideFunc(hideUntilRevealed(3, reveal)),
 		huh.NewGroup(
-			huh.NewInput().
+			NewAliasField(configPath, &in.HostName).
 				Title(stepTitle(6, i18n.KeyWizardAlias)).
-				DescriptionFunc(func() string { return aliasDescription(&in.HostName) }, &in.HostName).
-				Value(&in.Alias).
-				Validate(aliasFieldValidate(configPath, &in.HostName)),
+				Key("alias").
+				Value(&in.Alias),
 		).WithHideFunc(hideUntilRevealed(4, reveal)),
 	).WithLayout(huh.LayoutStack).WithShowErrors(false)
 

@@ -210,6 +210,10 @@ func (f *keyIdentityField) startTest(path string) tea.Cmd {
 }
 
 func (f *keyIdentityField) handleTestDone(msg keyIDDoneMsg) (tea.Model, tea.Cmd) {
+	// huh Group 会对同一消息 Update 两次，避免重复 NextField 直接提交表单。
+	if f.state == keyIDStateOK {
+		return f, nil
+	}
 	if msg.err != nil {
 		f.state = keyIDStateFail
 		f.inlineMsg = keyConnectionTestFailureMessage(msg.err)
@@ -229,7 +233,8 @@ func (f *keyIdentityField) handleTestDone(msg keyIDDoneMsg) (tea.Model, tea.Cmd)
 	if f.onOK != nil {
 		f.onOK()
 	}
-	return f, nil
+	// 测连成功后自动进入别名步，无需再按 Enter。
+	return f, huh.NextField
 }
 
 func (f *keyIdentityField) Init() tea.Cmd { return nil }
@@ -303,9 +308,6 @@ func (f *keyIdentityField) View() string {
 			sb.WriteString(styles.Description.Render(f.description))
 			sb.WriteString("\n")
 		}
-	case keyIDStateOK:
-		sb.WriteString(styles.Description.Render(i18n.T(i18n.KeyWizardConnOKContinue)))
-		sb.WriteString("\n")
 	}
 	sb.WriteString(f.renderInputRow(styles))
 	return styles.Base.Width(f.width).Height(f.height).Render(sb.String())

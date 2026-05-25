@@ -177,6 +177,10 @@ func (f *passwordTestField) startTest(password string) tea.Cmd {
 }
 
 func (f *passwordTestField) handleTestDone(msg pwTestDoneMsg) (tea.Model, tea.Cmd) {
+	// huh Group 会对同一消息 Update 两次，避免重复 NextField 直接提交表单。
+	if f.state == pwStateOK {
+		return f, nil
+	}
 	if msg.err != nil {
 		f.state = pwStateFail
 		f.inlineMsg = connectionTestFailureMessage(msg.err)
@@ -196,7 +200,8 @@ func (f *passwordTestField) handleTestDone(msg pwTestDoneMsg) (tea.Model, tea.Cm
 	if f.onOK != nil {
 		f.onOK()
 	}
-	return f, nil
+	// 测连成功后自动进入别名步，无需再按 Enter。
+	return f, huh.NextField
 }
 
 // Init implements huh.Field.
@@ -277,9 +282,6 @@ func (f *passwordTestField) View() string {
 			sb.WriteString(styles.Description.Render(f.description))
 			sb.WriteString("\n")
 		}
-	case pwStateOK:
-		sb.WriteString(styles.Description.Render(i18n.T(i18n.KeyWizardConnOKContinue)))
-		sb.WriteString("\n")
 	}
 	sb.WriteString(f.renderInputRow(styles))
 
