@@ -7,6 +7,10 @@
 *.so
 *.dylib
 
+# Debug / logs
+*.log
+debug-*.log
+
 # Test
 *.test
 *.out

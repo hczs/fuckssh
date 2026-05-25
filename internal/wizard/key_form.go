@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
-	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/keys"
+	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 )
 

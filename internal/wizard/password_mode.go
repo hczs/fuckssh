@@ -254,27 +254,26 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 func formatPasswordDeployError(err error, bakPath string, rolledBack bool) error {
 	if errors.Is(err, ErrDeployAborted) {
 		if rolledBack {
-			return fmt.Errorf("%s，已撤销本次对本地 config 与密钥的修改", i18n.T(i18n.KeyWizardPermFixCancelled))
+			return fmt.Errorf(i18n.T(i18n.KeyWizardDeployAbortedRB), i18n.T(i18n.KeyWizardPermFixCancelled))
 		}
 		return fmt.Errorf("%s", i18n.T(i18n.KeyWizardPermFixCancelled))
 	}
 	if rolledBack {
 		if errors.Is(err, sshclient.ErrDeployAuthFailed) {
-			return fmt.Errorf("SSH 密码认证失败，已撤销本次对本地 config 与密钥的修改: %w", err)
+			return fmt.Errorf(i18n.T(i18n.KeyWizardDeployAuthFailRB), err)
 		}
-		return fmt.Errorf("部署公钥失败，已撤销本次对本地 config 与密钥的修改: %w", err)
+		return fmt.Errorf(i18n.T(i18n.KeyWizardDeployFailRB), err)
 	}
 	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
 		if bakPath != "" {
-			return fmt.Errorf("SSH 密码认证失败（config 与密钥已写入，备份位于 %s）: %w",
-				bakPath, err)
+			return fmt.Errorf(i18n.T(i18n.KeyWizardDeployAuthBak), bakPath, err)
 		}
-		return fmt.Errorf("SSH 密码认证失败: %w", err)
+		return fmt.Errorf(i18n.T(i18n.KeyWizardDeployAuth), err)
 	}
 	if bakPath != "" {
-		return fmt.Errorf("部署公钥失败（config 已备份至 %s）: %w", bakPath, err)
+		return fmt.Errorf(i18n.T(i18n.KeyWizardDeployFailBak), bakPath, err)
 	}
-	return fmt.Errorf("部署公钥失败: %w", err)
+	return fmt.Errorf(i18n.T(i18n.KeyWizardDeployFail), err)
 }
 
 // finalizePasswordModeInput 校验并补全默认值。
@@ -286,10 +285,10 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 	in.Alias = strings.TrimSpace(in.Alias)
 
 	if in.HostName == "" || in.User == "" {
-		return PasswordModeInput{}, fmt.Errorf("%w: 请填写 IP/域名与用户名", ErrInvalidInput)
+		return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillHostUser))
 	}
 	if in.Password == "" {
-		return PasswordModeInput{}, fmt.Errorf("%w: 请填写 SSH 密码", ErrInvalidInput)
+		return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillPassword))
 	}
 
 	if in.Port == "" {
@@ -302,7 +301,7 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 	if in.Alias == "" {
 		in.Alias = keys.SanitizeAlias(in.HostName)
 		if in.Alias == "" {
-			return PasswordModeInput{}, fmt.Errorf("%w: 无法根据 HostName 生成别名", ErrInvalidInput)
+			return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrAliasFromHost))
 		}
 	} else {
 		in.Alias = keys.SanitizeAlias(in.Alias)
@@ -312,7 +311,7 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 		in.Algorithm = AlgorithmEd25519
 	}
 	if in.Algorithm != AlgorithmEd25519 {
-		return PasswordModeInput{}, fmt.Errorf("%w: 当前仅支持 Ed25519", ErrInvalidInput)
+		return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrAlgoEd25519))
 	}
 
 	return in, nil

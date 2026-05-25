@@ -7,10 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/fuckssh/fuckssh/internal/config"
 	"github.com/fuckssh/fuckssh/internal/i18n"
-	"github.com/fuckssh/fuckssh/internal/keys"
-	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 	"github.com/fuckssh/fuckssh/internal/wizard"
 	"github.com/mattn/go-isatty"
@@ -42,8 +39,12 @@ func runAdd(stdout, stderr io.Writer) error {
 		return err
 	}
 
-	if err := os.MkdirAll(dirOf(configPath), 0o700); err != nil {
-		return &os.PathError{Op: "mkdir", Path: dirOf(configPath), Err: err}
+	dir := filepath.Dir(configPath)
+	if dir == "" || dir == "." {
+		dir = "."
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return &os.PathError{Op: "mkdir", Path: dir, Err: err}
 	}
 
 	result, err := runWizardFn(configPath)
@@ -56,81 +57,19 @@ func runAdd(stdout, stderr io.Writer) error {
 		return nil
 	}
 
-	configExisted := configFileExists(configPath)
-	total := wizard.KeyFlowProgressTotal
-
-	wizard.ReportProgressStep(1, total, i18n.T(i18n.KeyWizardProgressBackup))
-	bakPath, err := config.Backup(configPath)
-	if err != nil {
+	if err := wizard.RunKeyFlow(configPath, result); err != nil {
 		return err
 	}
 
-	wizard.ReportProgressStep(2, total, i18n.T(i18n.KeyWizardProgressStageKey))
-	destPriv, copied, err := stageKeyForConfig(result.Alias, result.IdentityFile)
-	if err != nil {
-		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, false)
-		return err
-	}
-
-	identityRef, err := platform.IdentityFileRef(destPriv)
-	if err != nil {
-		if copied {
-			_ = keys.RemoveKeyPair(destPriv)
-		}
-		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, false)
-		return err
-	}
-
-	wizard.ReportProgressStep(3, total, i18n.T(i18n.KeyWizardProgressWriteCfg))
-	entry := config.HostEntry{
-		Alias:        result.Alias,
-		HostName:     result.HostName,
-		User:         result.User,
-		Port:         result.Port,
-		IdentityFile: identityRef,
-	}
-	if err := config.AppendHost(configPath, entry); err != nil {
-		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, true)
-		if copied {
-			_ = keys.RemoveKeyPair(destPriv)
-		}
-		return err
-	}
-
-	result.BackupPath = bakPath
-	result.IdentityFile = identityRef
 	printAddSuccess(stdout, stderr, configPath, result)
 	return nil
 }
 
-// stageKeyForConfig 将用户私钥复制到 ~/.ssh/keys/（若尚未在该路径），返回落盘绝对路径与是否新复制。
-func stageKeyForConfig(alias, srcPriv string) (destPriv string, copied bool, err error) {
-	keysDir, err := platform.KeysDir()
-	if err != nil {
-		return "", false, err
-	}
-	if err := os.MkdirAll(keysDir, 0o700); err != nil {
-		return "", false, err
-	}
-
-	privName, _ := keys.KeyPaths(alias)
-	destPriv = filepath.Join(keysDir, privName)
-	if filepath.Clean(srcPriv) == filepath.Clean(destPriv) {
-		return destPriv, false, nil
-	}
-
-	destPriv, err = keys.CopyKeyPair(srcPriv, keysDir, privName)
-	if err != nil {
-		return "", false, err
-	}
-	return destPriv, true, nil
-}
-
 func printAddSuccess(stdout, stderr io.Writer, configPath string, result *wizard.WizardResult) {
 	wizard.WriteAddSuccessSummary(stderr, result, configPath)
-	fmt.Fprintf(stdout, "ssh %s\n", result.Alias)
+	_, _ = fmt.Fprintf(stdout, "ssh %s\n", result.Alias)
 	if result.PasswordFlowComplete && isTerminalWriter(stdout) {
-		fmt.Fprintf(stderr, "%s\n", i18n.T(i18n.KeySummaryReadyHint))
+		_, _ = fmt.Fprintf(stderr, "%s\n", i18n.T(i18n.KeySummaryReadyHint))
 	}
 }
 
@@ -142,11 +81,6 @@ func isTerminalWriter(w io.Writer) bool {
 	return isatty.IsTerminal(f.Fd())
 }
 
-func configFileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
 // requireSSH 检测系统 ssh；缺失时输出警告与安装指引并终止。
 func requireSSH(stderr io.Writer) error {
 	_, err := checkSSHFn()
@@ -154,17 +88,8 @@ func requireSSH(stderr io.Writer) error {
 		return nil
 	}
 	if errors.Is(err, sshclient.ErrSSHNotFound) {
-		fmt.Fprintf(stderr, "%s\n%s\n", i18n.T(i18n.KeySSHMissingWarning), i18n.InstallOpenSSHGuide())
+		_, _ = fmt.Fprintf(stderr, "%s\n%s\n", i18n.T(i18n.KeySSHMissingWarning), i18n.InstallOpenSSHGuide())
 		return err
 	}
 	return err
-}
-
-func dirOf(path string) string {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == os.PathSeparator || path[i] == '/' {
-			return path[:i]
-		}
-	}
-	return "."
 }

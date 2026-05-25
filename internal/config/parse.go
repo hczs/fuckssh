@@ -26,7 +26,7 @@ func ParseFile(path string) ([]HostEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	return Parse(f, path)
 }

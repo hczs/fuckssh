@@ -11,6 +11,12 @@ var ErrHostExists = fmt.Errorf("config: Host 别名已存在")
 
 // AppendHost 在 config 文件末尾追加一个 Host 块（不覆盖已有内容）。
 func AppendHost(path string, entry HostEntry) error {
+	return withConfigLock(path, func() error {
+		return appendHostUnlocked(path, entry)
+	})
+}
+
+func appendHostUnlocked(path string, entry HostEntry) error {
 	if strings.TrimSpace(entry.Alias) == "" {
 		return fmt.Errorf("config: Host 别名不能为空")
 	}
@@ -43,7 +49,7 @@ func AppendHost(path string, entry HostEntry) error {
 	if err != nil {
 		return fmt.Errorf("config: open %q: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.WriteString(block); err != nil {
 		return fmt.Errorf("config: append Host block: %w", err)

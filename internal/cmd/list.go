@@ -8,8 +8,8 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Args:  cobra.NoArgs,
+	Use:  "list",
+	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runListCmd(cmd.OutOrStdout(), cmd.ErrOrStderr())
 	},
@@ -24,6 +24,7 @@ func runListCmd(stdout, stderr io.Writer) error {
 }
 
 func runList(configPath string, stdout, stderr io.Writer) error {
+	maybeWarnInclude(stderr, configPath)
 	entries, err := config.ParseFile(configPath)
 	if err != nil {
 		return err

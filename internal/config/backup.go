@@ -14,6 +14,15 @@ import (
 //
 // 命名：config.fuckssh.bak.<timestamp>
 func Backup(path string) (bakPath string, err error) {
+	err = withConfigLock(path, func() error {
+		var unlockErr error
+		bakPath, unlockErr = backupUnlocked(path)
+		return unlockErr
+	})
+	return bakPath, err
+}
+
+func backupUnlocked(path string) (bakPath string, err error) {
 	src, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -22,7 +31,7 @@ func Backup(path string) (bakPath string, err error) {
 		}
 		return "", err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	backupDir, err := platform.BackupDir()
 	if err != nil {
@@ -40,7 +49,7 @@ func Backup(path string) (bakPath string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("config: create backup %q: %w", bakPath, err)
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return "", fmt.Errorf("config: write backup: %w", err)

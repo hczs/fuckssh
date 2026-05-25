@@ -52,13 +52,12 @@ type passwordTestField struct {
 	elapsed   time.Duration
 	inlineMsg string // 行内状态文案（不通过 Error() 交给 huh，避免底部重复）
 
-	focused  bool
-	inline   bool
+	focused    bool
 	accessible bool
-	width    int
-	height   int
-	theme    *huh.Theme
-	keymap   huh.InputKeyMap
+	width      int
+	height     int
+	theme      *huh.Theme
+	keymap     huh.InputKeyMap
 }
 
 var passwordFieldIDSeq int
@@ -78,17 +77,17 @@ func NewPasswordTestField(ctx context.Context, in *PasswordModeInput, testAuth p
 	sp.Spinner = spinner.Dot
 
 	return &passwordTestField{
-		ctx:         ctx,
-		in:          in,
-		testAuth:    testAuth,
-		onOK:        onOK,
-		onFail:      onFail,
-		accessor:    &huh.EmbeddedAccessor[string]{},
-		id:          nextPasswordFieldID(),
-		textinput:   ti,
-		spinner:     sp,
-		state:  pwStateEdit,
-		keymap: huh.NewDefaultKeyMap().Input,
+		ctx:       ctx,
+		in:        in,
+		testAuth:  testAuth,
+		onOK:      onOK,
+		onFail:    onFail,
+		accessor:  &huh.EmbeddedAccessor[string]{},
+		id:        nextPasswordFieldID(),
+		textinput: ti,
+		spinner:   sp,
+		state:     pwStateEdit,
+		keymap:    huh.NewDefaultKeyMap().Input,
 	}
 }
 
@@ -293,7 +292,7 @@ func (f *passwordTestField) Error() error {
 	return nil
 }
 
-func (f *passwordTestField) Skip() bool  { return false }
+func (f *passwordTestField) Skip() bool { return false }
 func (f *passwordTestField) Zoom() bool { return false }
 
 func (f *passwordTestField) Focus() tea.Cmd {
@@ -376,5 +375,5 @@ func (f *passwordTestField) WithPosition(p huh.FieldPosition) huh.Field {
 	return f
 }
 
-func (f *passwordTestField) GetKey() string   { return f.key }
-func (f *passwordTestField) GetValue() any    { return f.accessor.Get() }
+func (f *passwordTestField) GetKey() string { return f.key }
+func (f *passwordTestField) GetValue() any  { return f.accessor.Get() }

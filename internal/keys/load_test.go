@@ -37,7 +37,7 @@ func TestLoadSignerFromFile_invalidKey(t *testing.T) {
 }
 
 func TestErrPassphraseNotSupported_isSentinel(t *testing.T) {
-	var err error = ErrPassphraseNotSupported
+	var err = ErrPassphraseNotSupported
 	if !errors.Is(err, ErrPassphraseNotSupported) {
 		t.Fatal("sentinel mismatch")
 	}

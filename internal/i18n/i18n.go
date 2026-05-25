@@ -28,10 +28,10 @@ type settingsFile struct {
 }
 
 var (
-	mu            sync.RWMutex
-	current       Lang = LangZH
-	loadOnce      sync.Once
-	loadErr       error
+	mu             sync.RWMutex
+	current        Lang = LangZH
+	loadOnce       sync.Once
+	loadErr        error
 	langConfigured bool // 已从环境变量或 settings.json 成功加载
 )
 
@@ -203,7 +203,7 @@ func isInteractive(w io.Writer) bool {
 }
 
 func pickLanguageInteractive() (Lang, error) {
-	var choice Lang = LangZH
+	var choice = LangZH
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[Lang]().

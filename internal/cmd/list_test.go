@@ -113,22 +113,19 @@ func Test_ListCmd_missingConfig_returnsExitCode3(t *testing.T) {
 }
 
 func Test_ListCmd_rejectsExtraArgs(t *testing.T) {
-	clearCommandArgs(rootCmd)
 	resetHelpFlags(rootCmd)
 	configFileFlag = fixtureConfig("single.conf")
 	t.Cleanup(func() {
 		configFileFlag = ""
 		resetHelpFlags(rootCmd)
-		clearCommandArgs(rootCmd)
 	})
 
-	rootCmd.SetArgs([]string{"list", "extra"})
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
 	i18n.SetInteractiveOverrideForTest(func(io.Writer) bool { return false })
 
-	err := rootCmd.Execute()
+	err := ExecuteWithArgs([]string{"list", "extra"})
 	if err == nil {
 		t.Fatal("expected error when extra args passed to list")
 	}

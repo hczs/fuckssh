@@ -117,7 +117,7 @@ func deployOnce(ctx context.Context, opts DeployOpts) error {
 	if err != nil {
 		return classifyDialError(err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	if err := runRemote(client, "mkdir -p ~/.ssh && chmod 700 ~/.ssh"); err != nil {
 		return fmt.Errorf("%w: 创建 ~/.ssh: %v", ErrDeployFailed, err)
@@ -332,7 +332,7 @@ func (r *realSSHClient) WriteAuthorizedKeys(content []byte) error {
 	if err != nil {
 		return err
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	sess.Stdin = bytes.NewReader(content)
 	// 通过 stdin 喂给 cat；使用 $HOME 避免单引号内 ~ 不展开，且不依赖远端 base64。
@@ -348,7 +348,7 @@ func (r *realSSHClient) RunSession(cmd string) (stdout, stderr string, exitCode 
 	if err != nil {
 		return "", "", -1, err
 	}
-	defer sess.Close()
+	defer func() { _ = sess.Close() }()
 
 	var outBuf, errBuf strings.Builder
 	sess.Stdout = &outBuf

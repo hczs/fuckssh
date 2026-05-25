@@ -40,6 +40,7 @@ func runSearchCmd(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
+	maybeWarnInclude(stderr, path)
 	entries, err := config.ParseFile(path)
 	if err != nil {
 		return err

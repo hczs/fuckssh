@@ -40,9 +40,7 @@ func TestAddCmd_abortsWhenSSHMissing(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
-	rootCmd.SetArgs([]string{"add"})
-
-	err := rootCmd.Execute()
+	err := ExecuteWithArgs([]string{"add"})
 	if err == nil {
 		t.Fatal("Execute: want error when ssh missing")
 	}
@@ -70,9 +68,7 @@ func TestAddCmd_noWarningWhenSSHPresent(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
-	rootCmd.SetArgs([]string{"add"})
-
-	_ = rootCmd.Execute()
+	_ = ExecuteWithArgs([]string{"add"})
 	if strings.Contains(stderr.String(), "PATH") && strings.Contains(stderr.String(), "未在") {
 		t.Errorf("stderr should not contain ssh missing warning, got: %q", stderr.String())
 	}
@@ -114,9 +110,7 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
-	rootCmd.SetArgs([]string{"add", "--config", cfg})
-
-	if err := rootCmd.Execute(); err != nil {
+	if err := ExecuteWithArgs([]string{"add", "--config", cfg}); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 
@@ -181,9 +175,7 @@ func TestAdd_passwordMode_integrationSkipsSecondBackup(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
-	rootCmd.SetArgs([]string{"add", "--config", cfg})
-
-	if err := rootCmd.Execute(); err != nil {
+	if err := ExecuteWithArgs([]string{"add", "--config", cfg}); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 

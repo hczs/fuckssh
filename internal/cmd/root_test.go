@@ -20,12 +20,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestRootHelp(t *testing.T) {
-	rootCmd.SetArgs([]string{"--help"})
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
 
-	if err := rootCmd.Execute(); err != nil {
+	if err := ExecuteWithArgs([]string{"--help"}); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 
@@ -35,10 +34,7 @@ func TestRootHelp(t *testing.T) {
 			t.Errorf("help output missing subcommand %q", sub)
 		}
 	}
-	t.Cleanup(func() {
-		resetHelpFlags(rootCmd)
-		clearCommandArgs(rootCmd)
-	})
+	t.Cleanup(func() { resetHelpFlags(rootCmd) })
 }
 
 func TestExecute_printsElapsedOnList(t *testing.T) {
@@ -48,13 +44,12 @@ func TestExecute_printsElapsedOnList(t *testing.T) {
 		resetHelpFlags(rootCmd)
 	})
 
-	rootCmd.SetArgs([]string{"list"})
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
 	i18n.SetInteractiveOverrideForTest(func(io.Writer) bool { return false })
 
-	if err := Execute(); err != nil {
+	if err := ExecuteWithArgs([]string{"list"}); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 	assertContainsAny(t, stderr.String(), "stderr elapsed", "执行耗时", "Elapsed")
@@ -64,12 +59,11 @@ func TestExecute_printsElapsedOnList(t *testing.T) {
 }
 
 func TestExecute_skipsElapsedOnHelp(t *testing.T) {
-	rootCmd.SetArgs([]string{"list", "--help"})
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
 
-	if err := Execute(); err != nil {
+	if err := ExecuteWithArgs([]string{"list", "--help"}); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 	for _, sub := range []string{"执行耗时", "Elapsed"} {
@@ -77,10 +71,7 @@ func TestExecute_skipsElapsedOnHelp(t *testing.T) {
 			t.Errorf("help output should not contain elapsed hint %q, got: %q", sub, buf.String())
 		}
 	}
-	t.Cleanup(func() {
-		resetHelpFlags(rootCmd)
-		clearCommandArgs(rootCmd)
-	})
+	t.Cleanup(func() { resetHelpFlags(rootCmd) })
 }
 
 func TestEnsureLanguageFromSettings(t *testing.T) {
@@ -99,14 +90,13 @@ func TestEnsureLanguageFromSettings(t *testing.T) {
 		t.Fatalf("after EnsureLoaded Current() = %q, want en", i18n.Current())
 	}
 
-	rootCmd.SetArgs([]string{"list", "--config", filepath.Join(t.TempDir(), "missing")})
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
 	i18n.SetInteractiveOverrideForTest(func(io.Writer) bool { return false })
 
 	// list 会因文件不存在失败，但语言应已保持为 settings 中的 en
-	_ = rootCmd.Execute()
+	_ = ExecuteWithArgs([]string{"list", "--config", filepath.Join(t.TempDir(), "missing")})
 	if i18n.Current() != i18n.LangEN {
 		t.Errorf("Current() = %q, want en", i18n.Current())
 	}

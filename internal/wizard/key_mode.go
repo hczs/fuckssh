@@ -78,20 +78,6 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 	}, nil
 }
 
-func keyModeResult(in KeyModeInput, stat fileStatFunc) (*WizardResult, error) {
-	out, err := finalizeKeyModeInput(in, stat)
-	if err != nil {
-		return nil, err
-	}
-	return &WizardResult{
-		Alias:        out.Alias,
-		HostName:     out.HostName,
-		User:         out.User,
-		Port:         out.Port,
-		IdentityFile: out.IdentityFile,
-	}, nil
-}
-
 // finalizeKeyModeInput 校验并补全默认值（供单测与 RunKeyMode 共用）。
 func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, error) {
 	in.HostName = strings.TrimSpace(in.HostName)

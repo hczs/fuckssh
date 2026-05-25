@@ -56,7 +56,6 @@ type keyIdentityField struct {
 	inlineMsg string
 
 	focused    bool
-	inline     bool
 	accessible bool
 	width      int
 	height     int
@@ -314,8 +313,8 @@ func (f *keyIdentityField) View() string {
 
 func (f *keyIdentityField) Error() error { return nil }
 
-func (f *keyIdentityField) Skip() bool  { return false }
-func (f *keyIdentityField) Zoom() bool   { return false }
+func (f *keyIdentityField) Skip() bool { return false }
+func (f *keyIdentityField) Zoom() bool { return false }
 
 func (f *keyIdentityField) Focus() tea.Cmd {
 	f.focused = true

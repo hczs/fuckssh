@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"sync"
 	"time"
 
@@ -10,6 +11,9 @@ import (
 )
 
 var helpLocalizedOnce sync.Once
+
+// currentRunArgs 保存本轮 Execute 的参数（正式运行来自 os.Args，测试来自 ExecuteWithArgs）。
+var currentRunArgs []string
 
 var (
 	rootCmd = &cobra.Command{
@@ -21,19 +25,48 @@ var (
 	configFileFlag string
 )
 
-// Execute runs the root command.
+// runArgsForHelp 返回用于判断是否输出 help 耗时的参数列表。
+func runArgsForHelp() []string {
+	if currentRunArgs != nil {
+		return currentRunArgs
+	}
+	if len(os.Args) > 1 {
+		return os.Args[1:]
+	}
+	return nil
+}
+
+// Execute runs the root command (args from os.Args).
 func Execute() error {
-	runArgs := commandArgs(rootCmd)
-	// 清除上一轮测试或命令残留的 help.Changed，避免误判；本轮参数已保存在 runArgs。
+	args := os.Args[1:]
+	if len(args) == 0 {
+		return executeWithArgs(nil)
+	}
+	return executeWithArgs(args)
+}
+
+// ExecuteWithArgs runs the root command with explicit args (for tests).
+func ExecuteWithArgs(args []string) error {
+	return executeWithArgs(args)
+}
+
+func executeWithArgs(args []string) error {
+	currentRunArgs = args
+	defer func() { currentRunArgs = nil }()
+
 	resetHelpFlags(rootCmd)
-	skipCmdElapsed = false
+	runArgs := args
+	if runArgs == nil {
+		runArgs = runArgsForHelp()
+	}
+
+	rootCmd.SetArgs(args)
 	start := time.Now()
 	err := rootCmd.Execute()
 	if !helpInArgs(runArgs) {
 		printCmdElapsed(rootCmd.ErrOrStderr(), time.Since(start))
 	}
 	resetHelpFlags(rootCmd)
-	clearCommandArgs(rootCmd)
 	return err
 }
 
@@ -55,9 +88,8 @@ func init() {
 }
 
 func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
-	runArgs := commandArgs(rootCmd)
+	runArgs := runArgsForHelp()
 	help := cmd.Flags().Changed("help") && helpInArgs(runArgs)
-	skipCmdElapsed = help
 	if help {
 		_, _ = i18n.Load()
 		applyLocalizedHelp()

@@ -20,7 +20,7 @@ const (
 // Run 编排 add 向导：选择模式后进入对应流程。
 // configPath 为 ssh config 路径（两种模式均用于别名检测与确认摘要）。
 func Run(configPath string) (*WizardResult, error) {
-	var mode ConnectionMode = ModePassword
+	var mode = ModePassword
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[ConnectionMode]().

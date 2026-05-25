@@ -50,13 +50,13 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("keys: open %q: %w", src, err)
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 	if err != nil {
 		return fmt.Errorf("keys: create %q: %w", dst, err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if _, err := io.Copy(out, in); err != nil {
 		_ = os.Remove(dst)

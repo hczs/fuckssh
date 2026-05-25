@@ -15,13 +15,13 @@ func RestoreFromBackup(backupPath, configPath string) error {
 	if err != nil {
 		return fmt.Errorf("config: open backup %q: %w", backupPath, err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	dst, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("config: open %q for restore: %w", configPath, err)
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return fmt.Errorf("config: restore %q: %w", configPath, err)
