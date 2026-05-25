@@ -95,3 +95,46 @@ func TestAppendHost_formatsIdentityFileWithQuotesWhenNeeded(t *testing.T) {
 		t.Errorf("config = %q, want quoted IdentityFile", string(raw))
 	}
 }
+
+func TestAppendHost_writesRemarkComment(t *testing.T) {
+	dir := t.TempDir()
+	cfg := filepath.Join(dir, "config")
+	entry := HostEntry{
+		Alias:        "my-vps",
+		HostName:     "203.0.113.10",
+		User:         "ubuntu",
+		Port:         "22",
+		IdentityFile: filepath.Join(dir, "id_ed25519"),
+		Remark:       "生产环境主站",
+	}
+
+	if err := AppendHost(cfg, entry); err != nil {
+		t.Fatalf("AppendHost: %v", err)
+	}
+
+	raw, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(raw)
+	if !strings.Contains(body, "# 生产环境主站\nHost my-vps") {
+		t.Errorf("config should have remark above Host:\n%s", body)
+	}
+
+	entries, err := ParseFile(cfg)
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Remark != "生产环境主站" {
+		t.Errorf("round-trip Remark = %+v", entries)
+	}
+}
+
+func TestFormatRemarkComments_emptySkipped(t *testing.T) {
+	if got := formatRemarkComments(""); got != "" {
+		t.Errorf("formatRemarkComments(\"\") = %q, want empty", got)
+	}
+	if got := formatRemarkComments("  "); got != "" {
+		t.Errorf("formatRemarkComments(\"  \") = %q, want empty", got)
+	}
+}

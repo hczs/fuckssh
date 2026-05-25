@@ -33,6 +33,8 @@ type aliasField struct {
 	height     int
 	theme      *huh.Theme
 	keymap     huh.InputKeyMap
+
+	onAdvance func()
 }
 
 var aliasFieldIDSeq int
@@ -73,6 +75,12 @@ func (f *aliasField) Title(title string) *aliasField {
 	return f
 }
 
+// OnAdvance 在别名校验通过并进入下一步时调用（用于解锁后续表单项）。
+func (f *aliasField) OnAdvance(fn func()) *aliasField {
+	f.onAdvance = fn
+	return f
+}
+
 func (f *aliasField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
 		f.theme = huh.ThemeCharm()
@@ -105,6 +113,9 @@ func (f *aliasField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			normalized := keys.NormalizeHostAlias(raw)
 			f.textinput.SetValue(normalized)
 			f.accessor.Set(normalized)
+			if f.onAdvance != nil {
+				f.onAdvance()
+			}
 			return f, huh.NextField
 		default:
 			// 用户修改输入时清除旧错误。
@@ -223,7 +234,7 @@ func (f *aliasField) WithHeight(height int) huh.Field {
 
 func (f *aliasField) WithPosition(p huh.FieldPosition) huh.Field {
 	f.keymap.Prev.SetEnabled(!p.IsFirst())
-	// 别名为表单最后一步；LayoutStack + reveal 时 IsLast 可能滞后，始终允许 Enter 提交校验。
+	// 别名后还有备注步；LayoutStack + reveal 时 IsLast 可能滞后，始终允许 Enter 提交校验。
 	f.keymap.Next.SetEnabled(true)
 	f.keymap.Submit.SetEnabled(true)
 	return f

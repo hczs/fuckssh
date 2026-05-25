@@ -51,6 +51,13 @@ func writeHostsEmpty(stdout io.Writer, query string) error {
 }
 
 // formatHostAliases 将 Host 行上的全部别名用逗号连接，供表格「别名」列展示。
+func formatHostRemark(e config.HostEntry) string {
+	if strings.TrimSpace(e.Remark) == "" {
+		return "-"
+	}
+	return e.Remark
+}
+
 func formatHostAliases(e config.HostEntry) string {
 	if len(e.Aliases) == 0 {
 		return e.Alias
@@ -64,10 +71,11 @@ func formatHostsTable(entries []config.HostEntry) string {
 		i18n.T(i18n.KeyTableHostname),
 		i18n.T(i18n.KeyTablePort),
 		i18n.T(i18n.KeyTableUser),
+		i18n.T(i18n.KeyTableRemark),
 	}
 	rows := make([][]string, len(entries))
 	for i, e := range entries {
-		rows[i] = []string{formatHostAliases(e), e.HostName, e.Port, e.User}
+		rows[i] = []string{formatHostAliases(e), e.HostName, e.Port, e.User, formatHostRemark(e)}
 	}
 	return formatBorderedTable(headers, rows)
 }

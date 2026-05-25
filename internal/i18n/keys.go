@@ -39,6 +39,9 @@ const (
 	KeyWizardAlias             = "wizard.alias"
 	KeyWizardAliasDesc         = "wizard.alias_desc"
 	KeyWizardAliasPreview      = "wizard.alias_preview"
+	KeyWizardRemark            = "wizard.remark"
+	KeyWizardRemarkDesc        = "wizard.remark_desc"
+	KeyWizardConfirmRemark     = "wizard.confirm_remark"
 	KeyWizardHostKeyHint       = "wizard.hostkey_hint"
 	KeyWizardErrEmpty          = "wizard.err_empty"
 	KeyWizardTestingConn       = "wizard.testing_conn"
@@ -120,4 +123,5 @@ const (
 	KeyTableHostname = "table.hostname"
 	KeyTablePort     = "table.port"
 	KeyTableUser     = "table.user"
+	KeyTableRemark   = "table.remark"
 )

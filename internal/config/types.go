@@ -10,6 +10,8 @@ type HostEntry struct {
 	User         string
 	Port         string
 	IdentityFile string
+	// Remark 为紧邻该 Host 块上方的 # 注释行（多行以换行连接）。
+	Remark string
 	// LineStart 为该 Host 指令所在行号（1-based），便于报错定位。
 	LineStart int
 }

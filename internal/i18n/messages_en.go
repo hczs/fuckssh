@@ -38,6 +38,9 @@ var messagesEN = map[string]string{
 	KeyWizardAlias:             "Host alias",
 	KeyWizardAliasDesc:         "Use lowercase letters and hyphens (e.g. prod-cn-web-01, my-vps); _ and . become -\nPress Enter to auto-generate from IP/hostname",
 	KeyWizardAliasPreview:      "Will use alias: %s",
+	KeyWizardRemark:            "Remark",
+	KeyWizardRemarkDesc:        "Optional; saved as a # comment above this Host in config for easier listing",
+	KeyWizardConfirmRemark:     "  · Remark: %s",
 	KeyWizardHostKeyHint:       "Note: server Host Key is not verified yet (planned for a later release)",
 	KeyWizardErrEmpty:          "cannot be empty",
 	KeyWizardTestingConn:       "Testing connection…",
@@ -129,4 +132,5 @@ var messagesEN = map[string]string{
 	KeyTableHostname: "HOSTNAME",
 	KeyTablePort:     "PORT",
 	KeyTableUser:     "USER",
+	KeyTableRemark:   "REMARK",
 }

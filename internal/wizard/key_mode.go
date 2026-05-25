@@ -22,6 +22,7 @@ type KeyModeInput struct {
 	Port         string
 	Alias        string
 	IdentityFile string
+	Remark       string
 }
 
 // WizardResult 为向导完成后的连接参数。
@@ -31,6 +32,7 @@ type WizardResult struct {
 	User         string
 	Port         string
 	IdentityFile string
+	Remark       string
 	// PasswordFlowComplete 为 true 时表示密码模式已在向导内完成备份、写 config 与部署。
 	PasswordFlowComplete bool
 	// BackupPath 为密码模式备份的 config 路径（成功时供提示；失败时错误信息亦会包含）。
@@ -75,6 +77,7 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 		User:         out.User,
 		Port:         out.Port,
 		IdentityFile: out.IdentityFile,
+		Remark:       out.Remark,
 	}, nil
 }
 
@@ -85,6 +88,7 @@ func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, err
 	in.Port = strings.TrimSpace(in.Port)
 	in.Alias = strings.TrimSpace(in.Alias)
 	in.IdentityFile = strings.TrimSpace(in.IdentityFile)
+	in.Remark = strings.TrimSpace(in.Remark)
 
 	if in.HostName == "" || in.User == "" || in.IdentityFile == "" {
 		return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillBasic))

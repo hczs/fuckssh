@@ -29,6 +29,7 @@ type PasswordModeInput struct {
 	Password  string
 	Port      string
 	Alias     string
+	Remark    string
 	Algorithm KeyAlgorithm
 }
 
@@ -188,6 +189,7 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 		User:         in.User,
 		Port:         in.Port,
 		IdentityFile: identityRef,
+		Remark:       strings.TrimSpace(in.Remark),
 	}
 	if err := deps.appendHost(configPath, entry); err != nil {
 		return state, err
@@ -244,6 +246,7 @@ func executePasswordFlow(ctx context.Context, in PasswordModeInput, configPath s
 		User:                 in.User,
 		Port:                 in.Port,
 		IdentityFile:         identityRef,
+		Remark:               strings.TrimSpace(in.Remark),
 		BackupPath:           setup.bakPath,
 		PasswordFlowComplete: true,
 	}, setup.bakPath, nil
@@ -283,6 +286,7 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 	in.Password = strings.TrimSpace(in.Password)
 	in.Port = strings.TrimSpace(in.Port)
 	in.Alias = strings.TrimSpace(in.Alias)
+	in.Remark = strings.TrimSpace(in.Remark)
 
 	if in.HostName == "" || in.User == "" {
 		return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillHostUser))

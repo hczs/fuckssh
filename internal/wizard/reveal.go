@@ -36,6 +36,9 @@ func seedReveal(r *revealState, in PasswordModeInput) {
 	if strings.TrimSpace(in.Password) != "" {
 		r.showThrough(4)
 	}
+	if strings.TrimSpace(in.Alias) != "" {
+		r.showThrough(5)
+	}
 }
 
 // seedRevealKey 密钥模式：私钥测连通过后才展示别名步。
@@ -48,5 +51,8 @@ func seedRevealKey(r *revealState, in KeyModeInput) {
 	}
 	if strings.TrimSpace(in.IdentityFile) != "" {
 		r.showThrough(4)
+	}
+	if strings.TrimSpace(in.Alias) != "" {
+		r.showThrough(5)
 	}
 }

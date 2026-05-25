@@ -37,6 +37,14 @@ func Test_Search_caseInsensitiveAlias(t *testing.T) {
 	}
 }
 
+func Test_Search_matchesRemark(t *testing.T) {
+	entries := mustParseFixture(t, "with_remark.conf")
+	got := FilterHosts(entries, "生产")
+	if len(got) != 1 || got[0].Alias != "my-vps" {
+		t.Fatalf("FilterHosts = %+v, want my-vps by remark", got)
+	}
+}
+
 func Test_Search_noMatch_returnsEmpty(t *testing.T) {
 	entries := mustParseFixture(t, "multiple.conf")
 	got := FilterHosts(entries, "nomatch-xyz")

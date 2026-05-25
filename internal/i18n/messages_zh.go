@@ -38,6 +38,9 @@ var messagesZH = map[string]string{
 	KeyWizardAlias:             "Host 别名",
 	KeyWizardAliasDesc:         "小写字母 + 连字符 - 分词（如 prod-cn-web-01、my-vps）；输入 _ 或 . 会自动转为 -\n回车则根据 IP/域名自动生成",
 	KeyWizardAliasPreview:      "将生成别名: %s",
+	KeyWizardRemark:            "备注",
+	KeyWizardRemarkDesc:        "可选；将写入 config 中该 Host 上方的 # 注释，便于 list 时识别",
+	KeyWizardConfirmRemark:     "  · 备注: %s",
 	KeyWizardHostKeyHint:       "提示: 当前不校验服务器 Host Key（后续版本将支持）",
 	KeyWizardErrEmpty:          "不能为空",
 	KeyWizardTestingConn:       "正在测试连接…",
@@ -129,4 +132,5 @@ var messagesZH = map[string]string{
 	KeyTableHostname: "地址",
 	KeyTablePort:     "端口",
 	KeyTableUser:     "用户",
+	KeyTableRemark:   "备注",
 }

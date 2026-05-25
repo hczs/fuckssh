@@ -81,8 +81,15 @@ func collectPasswordModeInput(ctx context.Context, configPath string, testAuth p
 			NewAliasField(configPath, &in.HostName).
 				Title(stepTitle(6, i18n.KeyWizardAlias)).
 				Key("alias").
-				Value(&in.Alias),
+				Value(&in.Alias).
+				OnAdvance(func() { reveal.showThrough(5) }),
 		).WithHideFunc(hideUntilRevealed(4, reveal)),
+		huh.NewGroup(
+			huh.NewInput().
+				Title(stepTitle(7, i18n.KeyWizardRemark)).
+				Description(i18n.T(i18n.KeyWizardRemarkDesc)).
+				Value(&in.Remark),
+		).WithHideFunc(hideUntilRevealed(5, reveal)),
 	).WithLayout(huh.LayoutStack).WithShowErrors(false)
 
 	if err := form.Run(); err != nil {

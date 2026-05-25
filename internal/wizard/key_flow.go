@@ -3,6 +3,7 @@ package wizard
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fuckssh/fuckssh/internal/config"
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -69,6 +70,7 @@ func runKeyFlow(configPath string, result *WizardResult, deps keyFlowDeps) error
 		User:         result.User,
 		Port:         result.Port,
 		IdentityFile: identityRef,
+		Remark:       strings.TrimSpace(result.Remark),
 	}
 	if err := deps.appendHost(configPath, entry); err != nil {
 		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, true)

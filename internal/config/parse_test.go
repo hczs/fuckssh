@@ -99,6 +99,25 @@ func TestParse_ignoresCommentAndBlankLines(t *testing.T) {
 	if entries[0].HostName != "1.2.3.4" {
 		t.Errorf("HostName = %q, want 1.2.3.4", entries[0].HostName)
 	}
+	if entries[0].Remark != "top comment" {
+		t.Errorf("Remark = %q, want top comment", entries[0].Remark)
+	}
+}
+
+func TestParse_associatesCommentAboveHost(t *testing.T) {
+	entries, err := ParseFile(fixturePath("with_remark.conf"))
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("len(entries) = %d, want 2", len(entries))
+	}
+	if entries[0].Remark != "生产环境主站" {
+		t.Errorf("first Remark = %q, want 生产环境主站", entries[0].Remark)
+	}
+	if entries[1].Remark != "测试机" {
+		t.Errorf("second Remark = %q, want 测试机", entries[1].Remark)
+	}
 }
 
 func TestParse_hostWithMultipleAliases(t *testing.T) {

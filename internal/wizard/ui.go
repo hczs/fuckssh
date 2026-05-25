@@ -8,10 +8,10 @@ import (
 	"github.com/fuckssh/fuckssh/internal/keys"
 )
 
-// 向导总步数：模式(1) + 表单字段(5) + 确认(1)。
-const wizardTotalSteps = 7
+// 向导总步数：模式(1) + 表单字段(6) + 确认(1)。
+const wizardTotalSteps = 8
 
-// stepTitle 生成「步骤 n/7 · 标签」标题。
+// stepTitle 生成「步骤 n/8 · 标签」标题。
 func stepTitle(step int, labelKey string) string {
 	return i18n.T(i18n.KeyWizardStepTitle, step, wizardTotalSteps, i18n.T(labelKey))
 }

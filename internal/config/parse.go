@@ -35,16 +35,25 @@ func ParseFile(path string) ([]HostEntry, error) {
 func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 	scanner := bufio.NewScanner(r)
 	var (
-		entries []HostEntry
-		current *HostEntry
-		lineNum int
+		entries       []HostEntry
+		current       *HostEntry
+		pendingRemark []string
+		lineNum       int
 	)
 
 	for scanner.Scan() {
 		lineNum++
 		raw := scanner.Text()
 		trimmed := strings.TrimSpace(raw)
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+		if trimmed == "" {
+			// 空行表示 Host 块结束，后续 # 注释归属下一个 Host。
+			current = nil
+			continue
+		}
+		if strings.HasPrefix(trimmed, "#") {
+			if current == nil {
+				pendingRemark = append(pendingRemark, stripCommentLine(trimmed))
+			}
 			continue
 		}
 
@@ -73,8 +82,10 @@ func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 				Alias:     aliases[0],
 				Aliases:   aliases,
 				Port:      "22",
+				Remark:    strings.Join(pendingRemark, "\n"),
 				LineStart: lineNum,
 			}
+			pendingRemark = nil
 			entries = append(entries, entry)
 			current = &entries[len(entries)-1]
 		case "include":
@@ -105,6 +116,12 @@ func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// stripCommentLine 去掉行首 # 及紧随的一个空格。
+func stripCommentLine(trimmed string) string {
+	s := strings.TrimPrefix(trimmed, "#")
+	return strings.TrimSpace(s)
 }
 
 func splitDirective(line string) (key, value string, err error) {

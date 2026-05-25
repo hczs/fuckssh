@@ -43,7 +43,7 @@ func appendHostUnlocked(path string, entry HostEntry) error {
 		port = "22"
 	}
 
-	block := formatHostBlock(entry.Alias, entry.HostName, entry.User, port, entry.IdentityFile)
+	block := formatHostBlock(entry.Alias, entry.HostName, entry.User, port, entry.IdentityFile, entry.Remark)
 
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {
@@ -78,9 +78,12 @@ func HostAliasExists(path, alias string) (bool, error) {
 }
 
 // formatHostBlock 按 OpenSSH 常用顺序生成 Host 块文本。
-func formatHostBlock(alias, hostName, user, port, identityFile string) string {
+func formatHostBlock(alias, hostName, user, port, identityFile, remark string) string {
 	var b strings.Builder
 	b.WriteString("\n")
+	if s := strings.TrimSpace(remark); s != "" {
+		b.WriteString(formatRemarkComments(s))
+	}
 	b.WriteString("Host ")
 	b.WriteString(alias)
 	b.WriteString("\n")
@@ -98,6 +101,21 @@ func formatHostBlock(alias, hostName, user, port, identityFile string) string {
 	b.WriteString("    IdentityFile ")
 	b.WriteString(formatIdentityFile(identityFile))
 	b.WriteString("\n")
+	return b.String()
+}
+
+// formatRemarkComments 将备注写成 Host 块上方的 # 注释行。
+func formatRemarkComments(remark string) string {
+	var b strings.Builder
+	for _, line := range strings.Split(remark, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		b.WriteString("# ")
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
 	return b.String()
 }
 

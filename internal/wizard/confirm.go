@@ -22,7 +22,7 @@ func confirmKeyRun(in KeyModeInput, configPath string) error {
 
 func buildPasswordConfirmSummary(in PasswordModeInput, configPath string) string {
 	alias := confirmAlias(in.Alias, in.HostName)
-	return i18n.T(
+	summary := i18n.T(
 		i18n.KeyWizardConfirmSummaryPW,
 		safeTTYString(alias),
 		in.User,
@@ -30,11 +30,12 @@ func buildPasswordConfirmSummary(in PasswordModeInput, configPath string) string
 		effectivePort(in.Port),
 		safeTTYString(configPath),
 	) + "\n" + i18n.T(i18n.KeyWizardConfirmHostKey)
+	return summary + confirmRemarkLine(in.Remark)
 }
 
 func buildKeyConfirmSummary(in KeyModeInput, configPath string) string {
 	alias := confirmAlias(in.Alias, in.HostName)
-	return i18n.T(
+	summary := i18n.T(
 		i18n.KeyWizardConfirmSummaryKey,
 		safeTTYString(alias),
 		in.User,
@@ -43,6 +44,14 @@ func buildKeyConfirmSummary(in KeyModeInput, configPath string) string {
 		safeTTYString(configPath),
 		safeTTYString(in.IdentityFile),
 	) + "\n" + i18n.T(i18n.KeyWizardConfirmHostKey)
+	return summary + confirmRemarkLine(in.Remark)
+}
+
+func confirmRemarkLine(remark string) string {
+	if strings.TrimSpace(remark) == "" {
+		return ""
+	}
+	return "\n" + i18n.T(i18n.KeyWizardConfirmRemark, remark)
 }
 
 func confirmAlias(alias, hostName string) string {
@@ -57,7 +66,7 @@ func runConfirmForm(summary string) error {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewNote().
-				Title(stepTitle(7, i18n.KeyWizardConfirmStep)).
+				Title(stepTitle(8, i18n.KeyWizardConfirmStep)).
 				Description(summary),
 			huh.NewConfirm().
 				Title(i18n.T(i18n.KeyWizardConfirmTitle)).

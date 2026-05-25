@@ -24,5 +24,8 @@ func hostMatchesQuery(e HostEntry, query string) bool {
 			return true
 		}
 	}
-	return strings.Contains(strings.ToLower(e.HostName), query)
+	if strings.Contains(strings.ToLower(e.HostName), query) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(e.Remark), query)
 }
