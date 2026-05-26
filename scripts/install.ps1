@@ -1,7 +1,7 @@
 ﻿# fuckssh 安装脚本（Windows PowerShell）
 #
 # 用法（在 PowerShell 中）：
-#   irm https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
 #   irm ... | iex; .\install.ps1 -Version v0.1.0
 #
 # 或先下载再执行：

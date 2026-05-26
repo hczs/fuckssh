@@ -26,7 +26,7 @@
 **macOS / Linux**（需要 `curl`，将二进制安装到 `~/.local/bin`）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 ```
 
 指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.1.0`
@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.s
 **Windows**（PowerShell）：
 
 ```powershell
-irm https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
 ```
 
 脚本会检测 PATH；若 `~/.local/bin`（或 Windows 下 `%USERPROFILE%\.local\bin`）未在 PATH 中，会提示如何添加。实现见 [`scripts/install.sh`](scripts/install.sh)、[`scripts/install.ps1`](scripts/install.ps1)。

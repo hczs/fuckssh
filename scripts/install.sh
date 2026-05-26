@@ -2,7 +2,7 @@
 # fuckssh 安装脚本（macOS / Linux）
 #
 # 用法：
-#   curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 #   curl -fsSL ... | sh -s -- --version v0.1.0
 #   curl -fsSL ... | sh -s -- --bin-dir "$HOME/bin"
 #
@@ -103,7 +103,7 @@ fuckssh 安装脚本（macOS / Linux）
   -h, --help        显示帮助
 
 示例:
-  curl -fsSL https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/scripts/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/master/scripts/install.sh | sh
   curl -fsSL .../install.sh | sh -s -- --version v0.1.0
 EOF
 }
