@@ -27,9 +27,10 @@ jobs:
         with:
           go-version: "1.26.2"
           cache: true
-      - uses: golangci/golangci-lint-action@v7
+      - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.1.6
+          version: v2.12.2
+          install-mode: goinstall
 
   build:
     name: Build

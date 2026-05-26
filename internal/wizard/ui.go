@@ -2,7 +2,6 @@ package wizard
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -29,7 +28,8 @@ func aliasPlaceholder(hostName string) string {
 
 // safeTTYString 将路径等字符串转为 TUI 安全展示（反斜杠在 lipgloss 中会被当成转义吃掉）。
 func safeTTYString(s string) string {
-	return filepath.ToSlash(s)
+	// filepath.ToSlash 仅在当前 OS 的分隔符为 \ 时才会替换；Linux CI 上需显式处理 Windows 路径。
+	return strings.ReplaceAll(s, `\`, `/`)
 }
 
 // effectivePort 空端口视为 22。
