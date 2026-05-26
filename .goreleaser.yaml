@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: fuckssh
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: fuckssh
+    main: ./cmd/fuckssh
+    binary: fuckssh
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin # macOS：下方 goarch 分别产出 Intel (amd64) 与 Apple Silicon (arm64)
+      - windows
+    goarch:
+      - amd64 # Intel / x86_64（含 macOS Intel、Linux、Windows）
+      - arm64 # Apple Silicon / AArch64（含 macOS M 系列、Linux ARM）
+    ldflags:
+      - -s -w
+      - -X github.com/fuckssh/fuckssh/internal/cmd.version={{.Version}}
+      - -X github.com/fuckssh/fuckssh/internal/cmd.commit={{.Commit}}
+      - -X github.com/fuckssh/fuckssh/internal/cmd.date={{.Date}}
+
+# 额外产出 macOS 通用二进制（单文件同时支持 Intel 与 Apple Silicon）。
+universal_binaries:
+  - id: fuckssh-universal
+    replace: false
+
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- if eq .Os "darwin" }}macos{{- else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "arm64" }}arm64
+      {{- else }}{{ .Arch }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  footer: >-
+    安装：`go install github.com/fuckssh/fuckssh@{{ .Tag }}`

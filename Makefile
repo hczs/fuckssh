@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt run clean
+.PHONY: build test lint fmt run clean release-dry
 
 BINARY := fuckssh
 MAIN   := ./cmd/fuckssh
@@ -21,3 +21,7 @@ run:
 
 clean:
 	rm -rf bin/
+
+# 本地模拟发布（不推送到 GitHub），需先安装 GoReleaser。
+release-dry:
+	goreleaser release --snapshot --clean --skip=publish

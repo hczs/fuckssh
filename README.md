@@ -45,9 +45,31 @@ make run      # go run ./cmd/fuckssh
 - [系统架构](docs/fuckssh-架构设计.md)
 - [脚手架计划](docs/plans/fuckssh-scaffold-plan.md)
 
-## CI
+## CI / Release
 
-GitHub Actions 在 push/PR 时执行 `go test`、golangci-lint，并在 Ubuntu / Windows / macOS 上交叉构建。
+| 触发条件 | 工作流 | 作用 |
+|----------|--------|------|
+| push / PR 到 `main` / `master` | [CI](.github/workflows/ci.yml) | `go test -race`、golangci-lint、三平台编译检查 |
+| 推送 tag `v*`（如 `v0.1.0`） | [Release](.github/workflows/release.yml) | GoReleaser 构建并发布到 GitHub Releases |
+
+发布新版本：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+本地试跑发布（不上传）：`make release-dry`（需安装 [GoReleaser](https://goreleaser.com/)）。
+
+安装已发布版本：`go install github.com/fuckssh/fuckssh@v0.1.0`
+
+**macOS 产物**（GitHub Releases 附件）：
+
+| 文件（示例） | 适用 |
+|--------------|------|
+| `fuckssh_macos_x86_64.tar.gz` | Intel Mac |
+| `fuckssh_macos_arm64.tar.gz` | Apple Silicon（M1/M2/M3 等） |
+| `fuckssh_macos_all.tar.gz` | 通用二进制（Intel + Apple Silicon 合一，任选其一即可） |
 
 ## 许可证
 
