@@ -345,15 +345,3 @@ func configFileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-
-// clearPassword 在返回前 best-effort 清零密码字符串（Go 字符串不可变，仅降低残留风险）。
-func clearPassword(pw *string) {
-	if pw == nil || *pw == "" {
-		return
-	}
-	b := []byte(*pw)
-	for i := range b {
-		b[i] = 0
-	}
-	*pw = ""
-}

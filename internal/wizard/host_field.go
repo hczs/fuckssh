@@ -46,9 +46,9 @@ func NewHostField(onValid func()) *hostField {
 	ti.Placeholder = hostInputPlaceholder()
 
 	return &hostField{
-		onValid:  onValid,
-		accessor: &huh.EmbeddedAccessor[string]{},
-		id:       nextHostFieldID(),
+		onValid:   onValid,
+		accessor:  &huh.EmbeddedAccessor[string]{},
+		id:        nextHostFieldID(),
 		textinput: ti,
 		keymap:    wizardInputKeyMap(),
 	}

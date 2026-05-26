@@ -9,9 +9,6 @@ import (
 	"github.com/fuckssh/fuckssh/internal/keys"
 )
 
-// 向导总步数：表单字段(7) + 确认(1)。
-const wizardTotalSteps = 8
-
 // fieldLabel 表单项标签，形如「1. Host 别名」（无步骤 x/y 噪音）。
 func fieldLabel(n int, labelKey string) string {
 	return fmt.Sprintf("%d. %s", n, i18n.T(labelKey))

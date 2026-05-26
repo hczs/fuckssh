@@ -80,17 +80,17 @@ func NewKeyIdentityField(ctx context.Context, in *KeyModeInput, testAuth keyAuth
 	sp.Spinner = spinner.Dot
 
 	return &keyIdentityField{
-		ctx:         ctx,
-		in:          in,
-		testAuth:    testAuth,
-		onOK:        onOK,
-		onFail:      onFail,
-		accessor:    &huh.EmbeddedAccessor[string]{},
-		id:          nextKeyIdentityFieldID(),
-		textinput:   ti,
-		spinner:     sp,
-		state:  keyIDStateEdit,
-		keymap: wizardCredentialKeyMap(),
+		ctx:       ctx,
+		in:        in,
+		testAuth:  testAuth,
+		onOK:      onOK,
+		onFail:    onFail,
+		accessor:  &huh.EmbeddedAccessor[string]{},
+		id:        nextKeyIdentityFieldID(),
+		textinput: ti,
+		spinner:   sp,
+		state:     keyIDStateEdit,
+		keymap:    wizardCredentialKeyMap(),
 	}
 }
 
