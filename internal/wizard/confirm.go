@@ -74,7 +74,8 @@ func runConfirmForm(summary string) error {
 				Negative(i18n.T(i18n.KeyWizardConfirmNo)).
 				Value(&ok),
 		),
-	).WithShowErrors(false)
+	).WithTheme(WizardTheme()).
+		WithShowErrors(false)
 
 	if err := form.Run(); err != nil {
 		return err

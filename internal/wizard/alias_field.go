@@ -81,7 +81,7 @@ func (f *aliasField) OnAdvance(fn func()) *aliasField {
 
 func (f *aliasField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
-		f.theme = huh.ThemeCharm()
+		f.theme = WizardTheme()
 	}
 	if f.focused {
 		return &f.theme.Focused

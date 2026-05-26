@@ -72,7 +72,7 @@ func (f *hostField) Title(title string) *hostField {
 
 func (f *hostField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
-		f.theme = huh.ThemeCharm()
+		f.theme = WizardTheme()
 	}
 	if f.focused {
 		return &f.theme.Focused

@@ -117,7 +117,7 @@ func (f *keyIdentityField) Description(desc string) *keyIdentityField {
 
 func (f *keyIdentityField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
-		f.theme = huh.ThemeCharm()
+		f.theme = WizardTheme()
 	}
 	if f.focused && f.state != keyIDStateTesting && f.state != keyIDStateOK {
 		return &f.theme.Focused
@@ -131,7 +131,7 @@ func (f *keyIdentityField) statusStyle() lipgloss.Style {
 	}
 	switch f.state {
 	case keyIDStateOK:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+		return wizardStatusOKStyle(f.theme)
 	case keyIDStateFail:
 		return f.theme.Focused.ErrorMessage
 	default:

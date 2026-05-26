@@ -115,7 +115,7 @@ func (f *passwordTestField) Description(desc string) *passwordTestField {
 
 func (f *passwordTestField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
-		f.theme = huh.ThemeCharm()
+		f.theme = WizardTheme()
 	}
 	if f.focused && f.state != pwStateTesting && f.state != pwStateOK {
 		return &f.theme.Focused
@@ -129,7 +129,7 @@ func (f *passwordTestField) statusStyle() lipgloss.Style {
 	}
 	switch f.state {
 	case pwStateOK:
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
+		return wizardStatusOKStyle(f.theme)
 	case pwStateFail:
 		return f.theme.Focused.ErrorMessage
 	default:

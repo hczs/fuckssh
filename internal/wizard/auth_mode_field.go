@@ -62,7 +62,7 @@ func (f *authModeField) Title(title string) *authModeField {
 
 func (f *authModeField) activeStyles() *huh.FieldStyles {
 	if f.theme == nil {
-		f.theme = huh.ThemeCharm()
+		f.theme = WizardTheme()
 	}
 	if f.focused {
 		return &f.theme.Focused
