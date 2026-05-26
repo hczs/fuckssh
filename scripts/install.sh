@@ -121,7 +121,7 @@ asset_name() {
 	case "${os}" in
 	linux) printf '%s\n' "fuckssh_linux_${arch_suffix}.tar.gz" ;;
 	darwin)
-		# 优先使用通用二进制，用户无需区分 Intel / Apple Silicon
+		# 优先通用包（GoReleaser Arch=all）；旧版 release 可能只有分架构包
 		printf '%s\n' "fuckssh_macos_all.tar.gz"
 		;;
 	*)
@@ -147,18 +147,53 @@ resolve_tag() {
 	printf '%s\n' "${tag}"
 }
 
+# macOS 通用包不存在时（如 v0.1.0）回退到与 uname -m 对应的分架构包。
+asset_name_fallback() {
+	primary="$1"
+	case "${primary}" in
+	fuckssh_macos_all.tar.gz)
+		arch="$(uname -m)"
+		case "${arch}" in
+		x86_64 | amd64) printf '%s\n' "fuckssh_macos_x86_64.tar.gz" ;;
+		aarch64 | arm64) printf '%s\n' "fuckssh_macos_arm64.tar.gz" ;;
+		*) return 1 ;;
+		esac
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
 download_release() {
 	tag="$1"
 	name="$2"
 	dest="$3"
 	url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/${name}"
 
+	if fetch_url "${url}" "${dest}"; then
+		return 0
+	fi
+
+	fallback="$(asset_name_fallback "${name}" 2>/dev/null || true)"
+	if [ -n "${fallback}" ]; then
+		warn "未找到 ${name}，改用 ${fallback}"
+		name="${fallback}"
+		url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/${name}"
+	fi
+
+	fetch_url "${url}" "${dest}" || err "下载失败: ${url}"
+}
+
+fetch_url() {
+	url="$1"
+	dest="$2"
 	if command -v curl >/dev/null 2>&1; then
 		info "下载 ${url}"
-		curl -fsSL -o "${dest}" "${url}" || err "下载失败: ${url}"
+		curl -fsSL -o "${dest}" "${url}"
 	elif command -v wget >/dev/null 2>&1; then
 		info "下载 ${url}"
-		wget -qO "${dest}" "${url}" || err "下载失败: ${url}"
+		wget -qO "${dest}" "${url}"
 	else
 		err "需要 curl 或 wget"
 	fi
