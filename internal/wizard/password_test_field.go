@@ -210,6 +210,18 @@ func (f *passwordTestField) handleTestDone(msg pwTestDoneMsg) (tea.Model, tea.Cm
 	return f, huh.NextField
 }
 
+// resumeEditFromSuccess 在测连已通过时回到可编辑态，便于用户改密码后重新测试。
+func (f *passwordTestField) resumeEditFromSuccess() tea.Cmd {
+	f.state = pwStateEdit
+	f.elapsed = 0
+	f.inlineMsg = ""
+	if f.onFail != nil {
+		f.onFail()
+	}
+	f.focused = true
+	return f.textinput.Focus()
+}
+
 // Init implements huh.Field.
 func (f *passwordTestField) Init() tea.Cmd {
 	return nil
@@ -240,8 +252,15 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return f, huh.NextField
 			case key.Matches(msg, f.keymap.Next):
 				return f, huh.NextField
+			default:
+				var cmds []tea.Cmd
+				cmds = append(cmds, f.resumeEditFromSuccess())
+				var cmd tea.Cmd
+				f.textinput, cmd = f.textinput.Update(msg)
+				f.accessor.Set(f.textinput.Value())
+				cmds = append(cmds, cmd)
+				return f, tea.Batch(cmds...)
 			}
-			return f, nil
 		}
 		f.inlineMsg = ""
 		switch {

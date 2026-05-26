@@ -76,6 +76,31 @@ func TestPasswordTestField_enterStartsTest(t *testing.T) {
 	}
 }
 
+func TestPasswordTestField_OKStateAllowsEditing(t *testing.T) {
+	var in PasswordModeInput
+	authOK := false
+	f := NewPasswordTestField(context.Background(), &in, nil,
+		func() { authOK = true },
+		func() { authOK = false },
+	)
+	f.state = pwStateOK
+	f.elapsed = 10 * time.Millisecond
+	f.textinput.SetValue("secret")
+	f.accessor.Set("secret")
+	authOK = true
+
+	_, _ = f.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
+	if f.state != pwStateEdit {
+		t.Fatalf("state = %v, want edit after typing in OK", f.state)
+	}
+	if authOK {
+		t.Fatal("editing after OK should clear auth test flag")
+	}
+	if f.textinput.Value() != "secretx" {
+		t.Fatalf("value = %q, want edited password", f.textinput.Value())
+	}
+}
+
 func TestPasswordTestField_enterStartsTestWhenNotLastInForm(t *testing.T) {
 	var in PasswordModeInput
 	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
