@@ -9,11 +9,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/fuckssh/fuckssh/internal/keys"
 )
 
-// aliasField 在别名输入行下方内联展示校验错误（与密码字段一致，避免 WithShowErrors(false) 吞掉提示）。
+// aliasField 在别名输入行内联展示校验错误；留空时根据主机地址实时预览并将生成别名。
 type aliasField struct {
 	configPath string
 	hostName   *string
@@ -55,7 +53,7 @@ func NewAliasField(configPath string, hostName *string) *aliasField {
 		accessor:   &huh.EmbeddedAccessor[string]{},
 		id:         nextAliasFieldID(),
 		textinput:  ti,
-		keymap:     huh.NewDefaultKeyMap().Input,
+		keymap:     wizardInputKeyMap(),
 	}
 }
 
@@ -75,7 +73,7 @@ func (f *aliasField) Title(title string) *aliasField {
 	return f
 }
 
-// OnAdvance 在别名校验通过并进入下一步时调用（用于解锁后续表单项）。
+// OnAdvance 在别名校验通过并进入下一步时调用。
 func (f *aliasField) OnAdvance(fn func()) *aliasField {
 	f.onAdvance = fn
 	return f
@@ -89,6 +87,14 @@ func (f *aliasField) activeStyles() *huh.FieldStyles {
 		return &f.theme.Focused
 	}
 	return &f.theme.Blurred
+}
+
+func (f *aliasField) syncPlaceholder() {
+	host := ""
+	if f.hostName != nil {
+		host = *f.hostName
+	}
+	f.textinput.Placeholder = aliasPlaceholder(host)
 }
 
 func (f *aliasField) validate(raw string) error {
@@ -110,7 +116,8 @@ func (f *aliasField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return f, nil
 			}
 			f.inlineMsg = ""
-			normalized := keys.NormalizeHostAlias(raw)
+			host := strings.TrimSpace(*f.hostName)
+			normalized := resolveAliasCandidate(raw, host)
 			f.textinput.SetValue(normalized)
 			f.accessor.Set(normalized)
 			if f.onAdvance != nil {
@@ -118,7 +125,6 @@ func (f *aliasField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return f, huh.NextField
 		default:
-			// 用户修改输入时清除旧错误。
 			f.inlineMsg = ""
 			var cmd tea.Cmd
 			f.textinput, cmd = f.textinput.Update(msg)
@@ -126,7 +132,6 @@ func (f *aliasField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return f, cmd
 		}
 	default:
-		// huh 会在每次 Update 后发送 refresh 消息；不可在此清除 inlineMsg，否则冲突提示闪退。
 		if !f.focused {
 			return f, nil
 		}
@@ -142,28 +147,18 @@ func (f *aliasField) View() string {
 	frame := styles.Base.GetHorizontalFrameSize()
 	maxWidth := f.width - frame
 
+	f.syncPlaceholder()
 	f.textinput.PlaceholderStyle = styles.TextInput.Placeholder
 	f.textinput.PromptStyle = styles.TextInput.Prompt
 	f.textinput.Cursor.Style = styles.TextInput.Cursor
 	f.textinput.Cursor.TextStyle = styles.TextInput.CursorText
 	f.textinput.TextStyle = styles.TextInput.Text
 
-	var sb strings.Builder
-	if f.title != "" {
-		sb.WriteString(styles.Title.Render(f.title))
-		sb.WriteString("\n")
-	}
-	if desc := aliasDescription(f.hostName); desc != "" {
-		sb.WriteString(styles.Description.Render(desc))
-		sb.WriteString("\n")
-	}
-	sb.WriteString(f.textinput.View())
+	var below []string
 	if f.inlineMsg != "" {
-		sb.WriteString("\n")
-		sb.WriteString(styles.ErrorMessage.Width(maxWidth).Render(f.inlineMsg))
+		below = append(below, styles.ErrorMessage.Width(maxWidth).Render(f.inlineMsg))
 	}
-
-	return styles.Base.Width(f.width).Height(f.height).Render(sb.String())
+	return renderInlineField(f.width, f.height, styles, f.title, f.textinput.View(), below...)
 }
 
 func (f *aliasField) Error() error { return nil }
@@ -173,13 +168,24 @@ func (f *aliasField) Zoom() bool { return false }
 
 func (f *aliasField) Focus() tea.Cmd {
 	f.focused = true
+	f.syncPlaceholder()
 	return f.textinput.Focus()
 }
 
 func (f *aliasField) Blur() tea.Cmd {
 	f.focused = false
 	f.textinput.Blur()
-	f.accessor.Set(f.textinput.Value())
+	raw := f.textinput.Value()
+	if strings.TrimSpace(raw) == "" {
+		host := strings.TrimSpace(*f.hostName)
+		if gen := resolveAliasCandidate("", host); gen != "" {
+			f.accessor.Set(gen)
+		} else {
+			f.accessor.Set(raw)
+		}
+	} else {
+		f.accessor.Set(raw)
+	}
 	return nil
 }
 
@@ -216,14 +222,8 @@ func (f *aliasField) WithKeyMap(k *huh.KeyMap) huh.Field {
 }
 
 func (f *aliasField) WithWidth(width int) huh.Field {
-	styles := f.activeStyles()
 	f.width = width
-	frame := styles.Base.GetHorizontalFrameSize()
-	promptW := lipgloss.Width(f.textinput.PromptStyle.Render(f.textinput.Prompt))
-	f.textinput.Width = width - frame - promptW - 1
-	if f.textinput.Width < 20 {
-		f.textinput.Width = 20
-	}
+	setInlineInputWidth(width, f.activeStyles(), f.title, &f.textinput)
 	return f
 }
 
@@ -233,10 +233,7 @@ func (f *aliasField) WithHeight(height int) huh.Field {
 }
 
 func (f *aliasField) WithPosition(p huh.FieldPosition) huh.Field {
-	f.keymap.Prev.SetEnabled(!p.IsFirst())
-	// 别名后还有备注步；LayoutStack + reveal 时 IsLast 可能滞后，始终允许 Enter 提交校验。
-	f.keymap.Next.SetEnabled(true)
-	f.keymap.Submit.SetEnabled(true)
+	applyInputNavPosition(&f.keymap, p)
 	return f
 }
 

@@ -66,7 +66,7 @@ func runConfirmForm(summary string) error {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewNote().
-				Title(stepTitle(8, i18n.KeyWizardConfirmStep)).
+				Title(confirmTitle()).
 				Description(summary),
 			huh.NewConfirm().
 				Title(i18n.T(i18n.KeyWizardConfirmTitle)).

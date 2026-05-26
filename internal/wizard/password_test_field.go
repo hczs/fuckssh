@@ -72,6 +72,7 @@ func NewPasswordTestField(ctx context.Context, in *PasswordModeInput, testAuth p
 	ti := textinput.New()
 	ti.EchoMode = textinput.EchoPassword
 	ti.CharLimit = 256
+	ti.Placeholder = i18n.T(i18n.KeyWizardPasswordTestDesc)
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
@@ -87,7 +88,7 @@ func NewPasswordTestField(ctx context.Context, in *PasswordModeInput, testAuth p
 		textinput: ti,
 		spinner:   sp,
 		state:     pwStateEdit,
-		keymap:    huh.NewDefaultKeyMap().Input,
+		keymap:    wizardCredentialKeyMap(),
 	}
 }
 
@@ -104,6 +105,11 @@ func (f *passwordTestField) Key(k string) *passwordTestField {
 
 func (f *passwordTestField) Title(title string) *passwordTestField {
 	f.title = title
+	return f
+}
+
+func (f *passwordTestField) Description(desc string) *passwordTestField {
+	f.description = desc
 	return f
 }
 
@@ -200,7 +206,7 @@ func (f *passwordTestField) handleTestDone(msg pwTestDoneMsg) (tea.Model, tea.Cm
 	if f.onOK != nil {
 		f.onOK()
 	}
-	// 测连成功后自动进入别名步，无需再按 Enter。
+	// 测连成功后自动进入备注步，无需再按 Enter。
 	return f, huh.NextField
 }
 
@@ -230,7 +236,9 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, f.keymap.Prev):
 				return f, huh.PrevField
-			case key.Matches(msg, f.keymap.Next, f.keymap.Submit):
+			case key.Matches(msg, f.keymap.Submit):
+				return f, huh.NextField
+			case key.Matches(msg, f.keymap.Next):
 				return f, huh.NextField
 			}
 			return f, nil
@@ -239,7 +247,7 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, f.keymap.Prev):
 			return f, huh.PrevField
-		case key.Matches(msg, f.keymap.Next, f.keymap.Submit):
+		case key.Matches(msg, f.keymap.Submit):
 			pwd := strings.TrimSpace(f.textinput.Value())
 			if pwd == "" {
 				f.state = pwStateFail
@@ -247,6 +255,8 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return f, nil
 			}
 			return f, f.startTest(pwd)
+		case key.Matches(msg, f.keymap.Next):
+			return f, huh.NextField
 		}
 	}
 
@@ -263,7 +273,6 @@ func (f *passwordTestField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View implements huh.Field.
 func (f *passwordTestField) View() string {
 	styles := f.activeStyles()
-	maxWidth := f.width - styles.Base.GetHorizontalFrameSize()
 
 	f.textinput.PlaceholderStyle = styles.TextInput.Placeholder
 	f.textinput.PromptStyle = styles.TextInput.Prompt
@@ -271,22 +280,9 @@ func (f *passwordTestField) View() string {
 	f.textinput.Cursor.TextStyle = styles.TextInput.CursorText
 	f.textinput.TextStyle = styles.TextInput.Text
 
-	var sb strings.Builder
-	if f.title != "" {
-		sb.WriteString(styles.Title.Render(f.title))
-		sb.WriteString("\n")
-	}
-	switch f.state {
-	case pwStateEdit:
-		if f.description != "" {
-			sb.WriteString(styles.Description.Render(f.description))
-			sb.WriteString("\n")
-		}
-	}
-	sb.WriteString(f.renderInputRow(styles))
-
-	_ = maxWidth
-	return styles.Base.Width(f.width).Height(f.height).Render(sb.String())
+	// 测连提示由表单项 Placeholder 承担，避免多行说明撑高布局。
+	_ = f.description
+	return renderInlineField(f.width, f.height, styles, f.title, f.renderInputRow(styles))
 }
 
 func (f *passwordTestField) Error() error {
@@ -302,7 +298,7 @@ func (f *passwordTestField) Focus() tea.Cmd {
 	if f.state == pwStateEdit || f.state == pwStateFail {
 		return f.textinput.Focus()
 	}
-	// 测连成功后本字段仍保持焦点，等待 Enter 进入别名步。
+	// 测连成功后本字段仍保持焦点，等待 Enter 进入备注步。
 	return nil
 }
 
@@ -354,14 +350,8 @@ func (f *passwordTestField) WithKeyMap(k *huh.KeyMap) huh.Field {
 }
 
 func (f *passwordTestField) WithWidth(width int) huh.Field {
-	styles := f.activeStyles()
 	f.width = width
-	frame := styles.Base.GetHorizontalFrameSize()
-	promptW := lipgloss.Width(f.textinput.PromptStyle.Render(f.textinput.Prompt))
-	f.textinput.Width = width - frame - promptW - 1
-	if f.textinput.Width < 20 {
-		f.textinput.Width = 20
-	}
+	setInlineInputWidth(width, f.activeStyles(), f.title, &f.textinput)
 	return f
 }
 
@@ -371,9 +361,7 @@ func (f *passwordTestField) WithHeight(height int) huh.Field {
 }
 
 func (f *passwordTestField) WithPosition(p huh.FieldPosition) huh.Field {
-	f.keymap.Prev.SetEnabled(!p.IsFirst())
-	f.keymap.Next.SetEnabled(!p.IsLast())
-	f.keymap.Submit.SetEnabled(p.IsLast())
+	applyCredentialNavPosition(&f.keymap, p)
 	return f
 }
 

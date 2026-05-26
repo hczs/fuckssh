@@ -1,6 +1,7 @@
 package wizard
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -8,21 +9,25 @@ import (
 	"github.com/fuckssh/fuckssh/internal/keys"
 )
 
-// 向导总步数：模式(1) + 表单字段(6) + 确认(1)。
+// 向导总步数：表单字段(7) + 确认(1)。
 const wizardTotalSteps = 8
 
-// stepTitle 生成「步骤 n/8 · 标签」标题。
-func stepTitle(step int, labelKey string) string {
-	return i18n.T(i18n.KeyWizardStepTitle, step, wizardTotalSteps, i18n.T(labelKey))
+// fieldLabel 表单项标签，形如「1. Host 别名」（无步骤 x/y 噪音）。
+func fieldLabel(n int, labelKey string) string {
+	return fmt.Sprintf("%d. %s", n, i18n.T(labelKey))
 }
 
-// aliasDescription 根据已填 HostName 生成别名说明（含预览）。
-func aliasDescription(hostName *string) string {
-	base := i18n.T(i18n.KeyWizardAliasDesc)
-	if preview := keys.NormalizeHostAlias(strings.TrimSpace(*hostName)); preview != "" {
-		return base + "\n" + i18n.T(i18n.KeyWizardAliasPreview, preview)
+// confirmTitle 确认页标题。
+func confirmTitle() string {
+	return i18n.T(i18n.KeyWizardConfirmStep)
+}
+
+// aliasPlaceholder 别名留空时，根据主机地址展示将写入的别名（实时预览）。
+func aliasPlaceholder(hostName string) string {
+	if gen := keys.NormalizeHostAlias(strings.TrimSpace(hostName)); gen != "" {
+		return gen
 	}
-	return base
+	return i18n.T(i18n.KeyWizardAliasEmptyHint)
 }
 
 // safeTTYString 将路径等字符串转为 TUI 安全展示（反斜杠在 lipgloss 中会被当成转义吃掉）。

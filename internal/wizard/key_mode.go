@@ -47,23 +47,25 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 		return nil, fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
 	}
 
-	var draft KeyModeInput
+	var draft *AddInput
 	var out KeyModeInput
 	for {
-		in, err := collectKeyModeInput(context.Background(), configPath, nil, &draft)
+		addIn, err := collectAddInput(context.Background(), configPath, nil, nil, draft)
 		if err != nil {
 			return nil, mapWizardAbort(err)
 		}
-		draft = in
+		if addIn.Mode != ModeKey {
+			return nil, fmt.Errorf("%w: 需要密钥连接模式", ErrInvalidInput)
+		}
 
-		out, err = finalizeKeyModeInput(in, os.Stat)
+		out, err = finalizeKeyModeInput(addIn.ToKeyModeInput(), os.Stat)
 		if err != nil {
 			return nil, err
 		}
 
 		if err := confirmKeyRun(out, configPath); err != nil {
 			if errors.Is(err, ErrWizardRetryForm) {
-				draft = out
+				draft = &addIn
 				continue
 			}
 			return nil, mapWizardAbort(err)
@@ -90,7 +92,10 @@ func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, err
 	in.IdentityFile = strings.TrimSpace(in.IdentityFile)
 	in.Remark = strings.TrimSpace(in.Remark)
 
-	if in.HostName == "" || in.User == "" || in.IdentityFile == "" {
+	if in.User == "" {
+		in.User = "root"
+	}
+	if in.HostName == "" || in.IdentityFile == "" {
 		return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillBasic))
 	}
 

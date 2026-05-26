@@ -50,25 +50,25 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 		return nil, "", fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
 	}
 
-	var draft PasswordModeInput
+	var draft *AddInput
 	var final PasswordModeInput
 	for {
-		in, err := collectPasswordModeInput(ctx, configPath, nil, &draft)
+		addIn, err := collectAddInput(ctx, configPath, nil, nil, draft)
 		if err != nil {
 			return nil, "", mapWizardAbort(err)
 		}
-		draft = in
+		if addIn.Mode != ModePassword {
+			return nil, "", fmt.Errorf("%w: 需要密码连接模式", ErrInvalidInput)
+		}
 
-		final, err = finalizePasswordModeInput(in)
-		clearPassword(&in.Password)
+		final, err = finalizePasswordModeInput(addIn.ToPasswordModeInput())
 		if err != nil {
 			return nil, "", err
 		}
 
 		if err := confirmPasswordRun(final, configPath); err != nil {
 			if errors.Is(err, ErrWizardRetryForm) {
-				// 返回修改：保留全部已填项（含密码）。
-				draft = final
+				draft = &addIn
 				continue
 			}
 			return nil, "", mapWizardAbort(err)
@@ -288,7 +288,10 @@ func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) 
 	in.Alias = strings.TrimSpace(in.Alias)
 	in.Remark = strings.TrimSpace(in.Remark)
 
-	if in.HostName == "" || in.User == "" {
+	if in.User == "" {
+		in.User = "root"
+	}
+	if in.HostName == "" {
 		return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillHostUser))
 	}
 	if in.Password == "" {

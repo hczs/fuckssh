@@ -24,7 +24,7 @@ func aliasFieldValidate(configPath string, hostName *string) func(string) error 
 	return func(raw string) error {
 		host := strings.TrimSpace(*hostName)
 		if host == "" {
-			return errors.New(i18n.T(i18n.KeyWizardErrEmpty))
+			return errors.New(i18n.T(i18n.KeyWizardErrFillHostFirst))
 		}
 		alias := resolveAliasCandidate(raw, host)
 		if alias == "" {

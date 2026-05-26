@@ -1,6 +1,10 @@
 package wizard
 
-// formRetryHint 在用户从确认页返回修改时，展示在表单首字段上方（仅消费一次）。
+import (
+	"github.com/fuckssh/fuckssh/internal/i18n"
+)
+
+// formRetryHint 在用户从确认页返回修改时，展示在表单首字段 placeholder（仅消费一次）。
 var formRetryHint string
 
 // SetFormRetryHint 设置返回修改提示（由 confirm 调用）。
@@ -15,13 +19,10 @@ func consumeFormRetryHint() string {
 	return h
 }
 
-// firstFieldDescription 合并返回修改提示与字段原有说明。
-func firstFieldDescription(base string) string {
+// hostInputPlaceholder 主机地址输入框占位（含返回修改提示）。
+func hostInputPlaceholder() string {
 	if h := consumeFormRetryHint(); h != "" {
-		if base == "" {
-			return h
-		}
-		return h + "\n\n" + base
+		return h
 	}
-	return base
+	return i18n.T(i18n.KeyWizardHostPlaceholder)
 }

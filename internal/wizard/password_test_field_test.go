@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 )
 
 func TestPasswordTestField_handleTestDoneOnlyAdvancesOnce(t *testing.T) {
@@ -18,6 +21,72 @@ func TestPasswordTestField_handleTestDoneOnlyAdvancesOnce(t *testing.T) {
 	_, cmd2 := f.handleTestDone(pwTestDoneMsg{elapsed: 10 * time.Millisecond})
 	if cmd2 != nil {
 		t.Fatal("duplicate success should not advance again")
+	}
+}
+
+func TestPasswordTestField_downAdvancesWithoutTest(t *testing.T) {
+	var in PasswordModeInput
+	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
+	f.textinput.SetValue("secret")
+	_, cmd := f.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if cmd == nil {
+		t.Fatal("down should advance without starting test")
+	}
+	if f.state == pwStateTesting {
+		t.Fatal("down must not start connection test")
+	}
+}
+
+func TestPasswordTestField_tabDoesNotAdvanceOrTest(t *testing.T) {
+	var in PasswordModeInput
+	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
+	f.textinput.SetValue("secret")
+	_, cmd := f.Update(tea.KeyMsg{Type: tea.KeyTab})
+	if cmd != nil {
+		t.Fatal("tab should not advance credential field")
+	}
+	if f.state == pwStateTesting {
+		t.Fatal("tab must not start connection test")
+	}
+}
+
+func TestPasswordTestField_upGoesPrevWithoutTest(t *testing.T) {
+	var in PasswordModeInput
+	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
+	f.textinput.SetValue("secret")
+	_, cmd := f.Update(tea.KeyMsg{Type: tea.KeyUp})
+	if cmd == nil {
+		t.Fatal("want PrevField on up")
+	}
+	if f.state == pwStateTesting {
+		t.Fatal("up must not start connection test")
+	}
+}
+
+func TestPasswordTestField_enterStartsTest(t *testing.T) {
+	var in PasswordModeInput
+	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
+	f.textinput.SetValue("secret")
+	_, cmd := f.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter should start test")
+	}
+	if f.state != pwStateTesting {
+		t.Fatalf("state = %v, want testing", f.state)
+	}
+}
+
+func TestPasswordTestField_enterStartsTestWhenNotLastInForm(t *testing.T) {
+	var in PasswordModeInput
+	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
+	f.WithPosition(huh.FieldPosition{Field: 5, LastField: 6, Group: 4, LastGroup: 5})
+	f.textinput.SetValue("secret")
+	if !f.keymap.Submit.Enabled() {
+		t.Fatal("Submit should stay enabled when field is not last")
+	}
+	_, cmd := f.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter should start test when not last in form")
 	}
 }
 

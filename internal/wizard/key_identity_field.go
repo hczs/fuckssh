@@ -74,6 +74,7 @@ func nextKeyIdentityFieldID() int {
 func NewKeyIdentityField(ctx context.Context, in *KeyModeInput, testAuth keyAuthTestFn, onOK, onFail func()) *keyIdentityField {
 	ti := textinput.New()
 	ti.CharLimit = 512
+	ti.Placeholder = i18n.T(i18n.KeyWizardPasswordTestDesc)
 
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
@@ -88,9 +89,8 @@ func NewKeyIdentityField(ctx context.Context, in *KeyModeInput, testAuth keyAuth
 		id:          nextKeyIdentityFieldID(),
 		textinput:   ti,
 		spinner:     sp,
-		state:       keyIDStateEdit,
-		description: i18n.T(i18n.KeyWizardIdentityDesc),
-		keymap:      huh.NewDefaultKeyMap().Input,
+		state:  keyIDStateEdit,
+		keymap: wizardCredentialKeyMap(),
 	}
 }
 
@@ -107,6 +107,11 @@ func (f *keyIdentityField) Key(k string) *keyIdentityField {
 
 func (f *keyIdentityField) Title(title string) *keyIdentityField {
 	f.title = title
+	return f
+}
+
+func (f *keyIdentityField) Description(desc string) *keyIdentityField {
+	f.description = desc
 	return f
 }
 
@@ -233,7 +238,7 @@ func (f *keyIdentityField) handleTestDone(msg keyIDDoneMsg) (tea.Model, tea.Cmd)
 	if f.onOK != nil {
 		f.onOK()
 	}
-	// 测连成功后自动进入别名步，无需再按 Enter。
+	// 测连成功后自动进入备注步，无需再按 Enter。
 	return f, huh.NextField
 }
 
@@ -259,7 +264,9 @@ func (f *keyIdentityField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, f.keymap.Prev):
 				return f, huh.PrevField
-			case key.Matches(msg, f.keymap.Next, f.keymap.Submit):
+			case key.Matches(msg, f.keymap.Submit):
+				return f, huh.NextField
+			case key.Matches(msg, f.keymap.Next):
 				return f, huh.NextField
 			}
 			return f, nil
@@ -268,7 +275,7 @@ func (f *keyIdentityField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, f.keymap.Prev):
 			return f, huh.PrevField
-		case key.Matches(msg, f.keymap.Next, f.keymap.Submit):
+		case key.Matches(msg, f.keymap.Submit):
 			path := strings.TrimSpace(f.textinput.Value())
 			if path == "" {
 				f.state = keyIDStateFail
@@ -276,6 +283,8 @@ func (f *keyIdentityField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return f, nil
 			}
 			return f, f.startTest(path)
+		case key.Matches(msg, f.keymap.Next):
+			return f, huh.NextField
 		}
 	}
 
@@ -297,20 +306,11 @@ func (f *keyIdentityField) View() string {
 	f.textinput.Cursor.TextStyle = styles.TextInput.CursorText
 	f.textinput.TextStyle = styles.TextInput.Text
 
-	var sb strings.Builder
-	if f.title != "" {
-		sb.WriteString(styles.Title.Render(f.title))
-		sb.WriteString("\n")
+	var below []string
+	if f.state == keyIDStateEdit && f.description != "" {
+		below = append(below, styles.Description.Render(f.description))
 	}
-	switch f.state {
-	case keyIDStateEdit:
-		if f.description != "" {
-			sb.WriteString(styles.Description.Render(f.description))
-			sb.WriteString("\n")
-		}
-	}
-	sb.WriteString(f.renderInputRow(styles))
-	return styles.Base.Width(f.width).Height(f.height).Render(sb.String())
+	return renderInlineField(f.width, f.height, styles, f.title, f.renderInputRow(styles), below...)
 }
 
 func (f *keyIdentityField) Error() error { return nil }
@@ -372,14 +372,8 @@ func (f *keyIdentityField) WithKeyMap(k *huh.KeyMap) huh.Field {
 }
 
 func (f *keyIdentityField) WithWidth(width int) huh.Field {
-	styles := f.activeStyles()
 	f.width = width
-	frame := styles.Base.GetHorizontalFrameSize()
-	promptW := lipgloss.Width(f.textinput.PromptStyle.Render(f.textinput.Prompt))
-	f.textinput.Width = width - frame - promptW - 1
-	if f.textinput.Width < 20 {
-		f.textinput.Width = 20
-	}
+	setInlineInputWidth(width, f.activeStyles(), f.title, &f.textinput)
 	return f
 }
 
@@ -389,9 +383,7 @@ func (f *keyIdentityField) WithHeight(height int) huh.Field {
 }
 
 func (f *keyIdentityField) WithPosition(p huh.FieldPosition) huh.Field {
-	f.keymap.Prev.SetEnabled(!p.IsFirst())
-	f.keymap.Next.SetEnabled(!p.IsLast())
-	f.keymap.Submit.SetEnabled(p.IsLast())
+	applyCredentialNavPosition(&f.keymap, p)
 	return f
 }
 
