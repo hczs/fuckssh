@@ -39,3 +39,11 @@ func effectivePort(port string) string {
 	}
 	return strings.TrimSpace(port)
 }
+
+// effectiveUser 空用户名视为 root（与表单项占位符及 i18n 说明一致）。
+func effectiveUser(user string) string {
+	if s := strings.TrimSpace(user); s != "" {
+		return s
+	}
+	return defaultSSHUser
+}

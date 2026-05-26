@@ -22,7 +22,7 @@ func defaultPasswordAuthTest(ctx context.Context, in PasswordModeInput) error {
 	return sshclient.TestPasswordAuth(ctx, sshclient.DeployOpts{
 		Host:     strings.TrimSpace(in.HostName),
 		Port:     effectivePort(in.Port),
-		User:     strings.TrimSpace(in.User),
+		User:     effectiveUser(in.User),
 		Password: in.Password,
 	})
 }
@@ -35,7 +35,7 @@ func defaultKeyAuthTest(ctx context.Context, in KeyModeInput) error {
 	return sshclient.TestKeyAuth(ctx, sshclient.KeyAuthOpts{
 		Host:         strings.TrimSpace(in.HostName),
 		Port:         effectivePort(in.Port),
-		User:         strings.TrimSpace(in.User),
+		User:         effectiveUser(in.User),
 		IdentityFile: expanded,
 	})
 }

@@ -282,15 +282,11 @@ func formatPasswordDeployError(err error, bakPath string, rolledBack bool) error
 // finalizePasswordModeInput 校验并补全默认值。
 func finalizePasswordModeInput(in PasswordModeInput) (PasswordModeInput, error) {
 	in.HostName = strings.TrimSpace(in.HostName)
-	in.User = strings.TrimSpace(in.User)
+	in.User = effectiveUser(in.User)
 	in.Password = strings.TrimSpace(in.Password)
 	in.Port = strings.TrimSpace(in.Port)
 	in.Alias = strings.TrimSpace(in.Alias)
 	in.Remark = strings.TrimSpace(in.Remark)
-
-	if in.User == "" {
-		in.User = "root"
-	}
 	if in.HostName == "" {
 		return PasswordModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillHostUser))
 	}

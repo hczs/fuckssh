@@ -76,15 +76,10 @@ func collectAddInput(ctx context.Context, configPath string, pwTest passwordAuth
 				Value(&in.Alias),
 		),
 		huh.NewGroup(
-			huh.NewInput().
+			NewUserField(syncScratch).
 				Title(fieldLabel(3, i18n.KeyWizardUser)).
-				Inline(true).
-				Placeholder("root").
-				Value(&in.User).
-				Validate(func(s string) error {
-					syncScratch()
-					return nil
-				}),
+				Key("user").
+				Value(&in.User),
 		),
 		huh.NewGroup(
 			huh.NewInput().

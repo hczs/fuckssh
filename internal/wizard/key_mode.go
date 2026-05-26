@@ -86,15 +86,11 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 // finalizeKeyModeInput 校验并补全默认值（供单测与 RunKeyMode 共用）。
 func finalizeKeyModeInput(in KeyModeInput, stat fileStatFunc) (KeyModeInput, error) {
 	in.HostName = strings.TrimSpace(in.HostName)
-	in.User = strings.TrimSpace(in.User)
+	in.User = effectiveUser(in.User)
 	in.Port = strings.TrimSpace(in.Port)
 	in.Alias = strings.TrimSpace(in.Alias)
 	in.IdentityFile = strings.TrimSpace(in.IdentityFile)
 	in.Remark = strings.TrimSpace(in.Remark)
-
-	if in.User == "" {
-		in.User = "root"
-	}
 	if in.HostName == "" || in.IdentityFile == "" {
 		return KeyModeInput{}, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T(i18n.KeyWizardErrFillBasic))
 	}
