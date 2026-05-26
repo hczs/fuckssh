@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt run clean release-dry
+.PHONY: build test lint fmt run clean release-dry hooks
 
 BINARY := fuckssh
 MAIN   := ./cmd/fuckssh
@@ -21,6 +21,11 @@ run:
 
 clean:
 	rm -rf bin/
+
+# 将 Git hooks 目录设为 .githooks（含 pre-commit：暂存 .go 自动 fmt + lint）
+hooks:
+	git config core.hooksPath .githooks
+	@echo "Git hooks 已启用：core.hooksPath=.githooks"
 
 # 本地模拟发布（不推送到 GitHub），需先安装 GoReleaser。
 release-dry:

@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# pre-commit：提交前对暂存的 .go 执行 gofmt/goimports，并运行 golangci-lint（与 make lint 一致）。
+# 启用：在项目根目录执行一次 make hooks
+
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+require() {
+	if ! command -v "$1" >/dev/null 2>&1; then
+		echo "pre-commit: 未找到 $1 —— $2" >&2
+		exit 1
+	fi
+}
+
+require gofmt "请安装 Go 工具链"
+require goimports "请执行: go install golang.org/x/tools/cmd/goimports@latest"
+require golangci-lint "见 https://golangci-lint.run/"
+
+STAGED_GO=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+if [ -n "$STAGED_GO" ]; then
+	echo "pre-commit: 格式化暂存的 Go 文件..."
+	printf '%s\n' "$STAGED_GO" | while IFS= read -r f; do
+		[ -n "$f" ] || continue
+		[ -f "$f" ] || continue
+		gofmt -w "$f"
+		goimports -w "$f"
+		git add -- "$f"
+	done
+fi
+
+echo "pre-commit: golangci-lint..."
+golangci-lint run ./...
+
+echo "pre-commit: 通过"
