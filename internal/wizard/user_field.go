@@ -14,7 +14,7 @@ const defaultSSHUser = "root"
 
 // userField SSH 用户名；留空回车时使用 root（与占位符提示一致）。
 type userField struct {
-	accessor huh.Accessor[string]
+	accessor  huh.Accessor[string]
 	onAdvance func()
 
 	key   string

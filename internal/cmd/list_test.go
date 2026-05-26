@@ -43,7 +43,7 @@ func Test_ListCmd_printsTableFromFixture(t *testing.T) {
 
 	out := stdout.String()
 	hasZH := strings.Contains(out, "别名") && strings.Contains(out, "地址")
-	hasEN := strings.Contains(out, "Alias") && strings.Contains(out, "Hostname")
+	hasEN := strings.Contains(out, "ALIAS") && strings.Contains(out, "HOSTNAME")
 	if !hasZH && !hasEN {
 		t.Errorf("output missing table headers in:\n%s", out)
 	}

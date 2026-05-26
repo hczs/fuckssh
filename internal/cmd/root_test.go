@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,7 +16,16 @@ func TestMain(m *testing.M) {
 	// 固定中文界面；勿用 FUCKSSH_LANG 环境变量，以免干扰「从 settings.json 加载语言」等单测。
 	i18n.ResetForTest()
 	i18n.SetCurrent(i18n.LangZH)
+	i18n.SetInteractiveOverrideForTest(func(io.Writer) bool { return false })
+	dir, err := os.MkdirTemp("", "fuckssh-cmd-test-*")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "TestMain: %v\n", err)
+		os.Exit(1)
+	}
+	// 避免读取开发者本机 ~/.config/fuckssh/settings.json 导致语言漂移。
+	i18n.SetSettingsPathForTest(filepath.Join(dir, "settings.json"))
 	code := m.Run()
+	_ = os.RemoveAll(dir)
 	os.Exit(code)
 }
 
