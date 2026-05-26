@@ -29,13 +29,17 @@ builds:
 # 额外产出 macOS 通用二进制（单文件同时支持 Intel 与 Apple Silicon）。
 universal_binaries:
   - id: fuckssh-universal
+  # 必须指向 builds.id；省略时默认用 fuckssh-universal，无法合并 darwin 双架构
+    ids:
+      - fuckssh
     replace: false
 
 archives:
   - name_template: >-
       {{ .ProjectName }}_
       {{- if eq .Os "darwin" }}macos{{- else }}{{ .Os }}{{ end }}_
-      {{- if eq .Arch "amd64" }}x86_64
+      {{- if eq .Arch "all" }}all
+      {{- else if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "arm64" }}arm64
       {{- else }}{{ .Arch }}{{ end }}
     formats: [tar.gz]
