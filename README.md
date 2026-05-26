@@ -21,7 +21,27 @@
 
 ## 安装
 
-### 预编译二进制
+### 一键安装（推荐）
+
+**macOS / Linux**（需要 `curl`，将二进制安装到 `~/.local/bin`）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.sh | sh
+```
+
+指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.1.0`
+
+**Windows**（PowerShell）：
+
+```powershell
+irm https://raw.githubusercontent.com/hczs/fuckssh/main/scripts/install.ps1 | iex
+```
+
+脚本会检测 PATH；若 `~/.local/bin`（或 Windows 下 `%USERPROFILE%\.local\bin`）未在 PATH 中，会提示如何添加。实现见 [`scripts/install.sh`](scripts/install.sh)、[`scripts/install.ps1`](scripts/install.ps1)。
+
+**本地调试：** Windows 默认没有 `sh`，请用 PowerShell 运行 `.\scripts\install.ps1 -BinDir .\bin`；`install.sh` 需在 [Git Bash](https://git-scm.com/) 或 WSL 中执行。
+
+### 预编译二进制（手动）
 
 在 [GitHub Releases](https://github.com/hczs/fuckssh/releases) 下载对应平台的压缩包，解压后将 `fuckssh` 放入 `PATH`。
 
