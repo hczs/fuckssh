@@ -242,6 +242,18 @@ func (f *keyIdentityField) handleTestDone(msg keyIDDoneMsg) (tea.Model, tea.Cmd)
 	return f, huh.NextField
 }
 
+// resumeEditFromSuccess 测连已通过时回到可编辑态，便于修改私钥路径后重新测试。
+func (f *keyIdentityField) resumeEditFromSuccess() tea.Cmd {
+	f.state = keyIDStateEdit
+	f.elapsed = 0
+	f.inlineMsg = ""
+	if f.onFail != nil {
+		f.onFail()
+	}
+	f.focused = true
+	return f.textinput.Focus()
+}
+
 func (f *keyIdentityField) Init() tea.Cmd { return nil }
 
 func (f *keyIdentityField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -268,8 +280,15 @@ func (f *keyIdentityField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return f, huh.NextField
 			case key.Matches(msg, f.keymap.Next):
 				return f, huh.NextField
+			default:
+				var cmds []tea.Cmd
+				cmds = append(cmds, f.resumeEditFromSuccess())
+				var cmd tea.Cmd
+				f.textinput, cmd = f.textinput.Update(msg)
+				f.accessor.Set(f.textinput.Value())
+				cmds = append(cmds, cmd)
+				return f, tea.Batch(cmds...)
 			}
-			return f, nil
 		}
 		f.inlineMsg = ""
 		switch {
