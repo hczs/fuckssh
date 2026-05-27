@@ -8,7 +8,6 @@
 #   Set-ExecutionPolicy -Scope Process Bypass
 #   .\scripts\install.ps1
 
-[CmdletBinding()]
 param(
     [string]$Version = "",
     [string]$BinDir = "",
