@@ -34,3 +34,14 @@ func Test_maybeWarnInclude_silentWithoutInclude(t *testing.T) {
 		t.Errorf("stderr = %q, want empty", stderr.String())
 	}
 }
+
+func Test_maybeWarnInclude_warnsOnError(t *testing.T) {
+	dir := t.TempDir()
+	// 目录路径作为 config 会触发 Open 错误（非 IsNotExist）。
+	var stderr bytes.Buffer
+	maybeWarnInclude(&stderr, dir)
+	out := stderr.String()
+	if !strings.Contains(out, "warning:") {
+		t.Errorf("stderr = %q, want warning message", out)
+	}
+}
