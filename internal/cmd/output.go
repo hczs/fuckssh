@@ -52,7 +52,7 @@ func writeHostsEmpty(stdout io.Writer, query string) error {
 
 // formatHostAliases 将 Host 行上的全部别名用逗号连接，供表格「别名」列展示。
 func formatHostRemark(e config.HostEntry) string {
-	if strings.TrimSpace(e.Remark) == "" {
+	if e.Remark == "" {
 		return "-"
 	}
 	return e.Remark

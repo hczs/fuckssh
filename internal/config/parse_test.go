@@ -148,6 +148,22 @@ func TestParse_hostWithMultipleAliases(t *testing.T) {
 	}
 }
 
+func TestParse_emptyLineInsideHostBlock(t *testing.T) {
+	entries, err := ParseFile(fixturePath("empty_line_in_block.conf"))
+	if err != nil {
+		t.Fatalf("ParseFile: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("len(entries) = %d, want 2", len(entries))
+	}
+	if entries[0].Alias != "web" || entries[0].Port != "2222" {
+		t.Errorf("first host: %+v", entries[0])
+	}
+	if entries[1].Alias != "db" || entries[1].User != "root" {
+		t.Errorf("second host: %+v", entries[1])
+	}
+}
+
 func TestParseFile_missingFile(t *testing.T) {
 	_, err := ParseFile(filepath.Join(t.TempDir(), "missing.conf"))
 	if err == nil {

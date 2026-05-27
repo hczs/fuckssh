@@ -46,14 +46,12 @@ func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 		raw := scanner.Text()
 		trimmed := strings.TrimSpace(raw)
 		if trimmed == "" {
-			// 空行表示 Host 块结束，后续 # 注释归属下一个 Host。
-			current = nil
+			// 空行不结束 Host 块（标准 ssh config 允许块内空行）。
 			continue
 		}
 		if strings.HasPrefix(trimmed, "#") {
-			if current == nil {
-				pendingRemark = append(pendingRemark, stripCommentLine(trimmed))
-			}
+			// 始终收集注释，Host 指令到来时清空；块内注释会在遇到配置项时被丢弃。
+			pendingRemark = append(pendingRemark, stripCommentLine(trimmed))
 			continue
 		}
 
@@ -100,14 +98,9 @@ func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 					Msg:     "Host 块之外的指令",
 				}
 			}
-			if err := applyOption(current, key, value); err != nil {
-				return nil, &ParseError{
-					File:    filename,
-					Line:    lineNum,
-					Snippet: raw,
-					Msg:     err.Error(),
-				}
-			}
+			// 块内遇到配置项，清空 pendingRemark，防止块内注释泄漏到下一个 Host。
+			pendingRemark = nil
+			applyOption(current, key, value)
 		}
 	}
 
@@ -146,7 +139,7 @@ func splitDirective(line string) (key, value string, err error) {
 	return line, "", nil
 }
 
-func applyOption(entry *HostEntry, key, value string) error {
+func applyOption(entry *HostEntry, key, value string) {
 	switch strings.ToLower(key) {
 	case "hostname":
 		entry.HostName = value
@@ -157,7 +150,6 @@ func applyOption(entry *HostEntry, key, value string) error {
 	case "identityfile":
 		entry.IdentityFile = value
 	default:
-		return fmt.Errorf("不支持的配置项 %q", key)
+		// 静默忽略不支持的配置项（ssh config 选项众多，MVP 只提取关心的字段）。
 	}
-	return nil
 }
