@@ -1,7 +1,9 @@
-.PHONY: build test lint fmt run clean release-dry hooks
+.PHONY: build test lint fmt run clean release-dry hooks check
 
 BINARY := fuckssh
 MAIN   := ./cmd/fuckssh
+
+check: fmt lint test
 
 build:
 	go build -o bin/$(BINARY) $(MAIN)
