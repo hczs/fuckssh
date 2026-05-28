@@ -44,7 +44,7 @@ type fileStatFunc func(name string) (os.FileInfo, error)
 // RunKeyMode 通过堆叠表单收集密钥连接所需字段。
 func RunKeyMode(configPath string) (*WizardResult, error) {
 	if strings.TrimSpace(configPath) == "" {
-		return nil, fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
+		return nil, fmt.Errorf("%w: config path must not be empty", ErrInvalidInput)
 	}
 
 	var draft *AddInput
@@ -55,7 +55,7 @@ func RunKeyMode(configPath string) (*WizardResult, error) {
 			return nil, mapWizardAbort(err)
 		}
 		if addIn.Mode != ModeKey {
-			return nil, fmt.Errorf("%w: 需要密钥连接模式", ErrInvalidInput)
+			return nil, fmt.Errorf("%w: key connection mode required", ErrInvalidInput)
 		}
 
 		out, err = finalizeKeyModeInput(addIn.ToKeyModeInput(), os.Stat)

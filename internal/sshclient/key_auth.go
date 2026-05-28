@@ -30,10 +30,10 @@ var dialKeySSH = defaultDialKeySSH
 // TestKeyAuth 验证能否用指定私钥建立 SSH 连接（向导「测试连接」用）。
 func TestKeyAuth(ctx context.Context, opts KeyAuthOpts) error {
 	if strings.TrimSpace(opts.Host) == "" || strings.TrimSpace(opts.User) == "" {
-		return fmt.Errorf("%w: Host 与 User 不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: Host and User must not be empty", ErrDeployFailed)
 	}
 	if strings.TrimSpace(opts.IdentityFile) == "" {
-		return fmt.Errorf("%w: 私钥路径不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: identity file path must not be empty", ErrDeployFailed)
 	}
 	client, err := dialKeySSH(ctx, opts)
 	if err != nil {

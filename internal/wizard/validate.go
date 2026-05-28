@@ -14,7 +14,7 @@ func validatePort(port string) error {
 	}
 	n, err := strconv.Atoi(port)
 	if err != nil || n < 1 || n > 65535 {
-		return fmt.Errorf("%w: 端口须在 1–65535 之间", ErrInvalidInput)
+		return fmt.Errorf("%w: port must be between 1 and 65535", ErrInvalidInput)
 	}
 	return nil
 }

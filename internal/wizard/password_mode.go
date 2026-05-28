@@ -47,7 +47,7 @@ type passwordFlowDeps struct {
 // configPath 为 ssh config 路径（与 cmd --config 一致）。
 func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, string, error) {
 	if strings.TrimSpace(configPath) == "" {
-		return nil, "", fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
+		return nil, "", fmt.Errorf("%w: config path must not be empty", ErrInvalidInput)
 	}
 
 	var draft *AddInput
@@ -58,7 +58,7 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 			return nil, "", mapWizardAbort(err)
 		}
 		if addIn.Mode != ModePassword {
-			return nil, "", fmt.Errorf("%w: 需要密码连接模式", ErrInvalidInput)
+			return nil, "", fmt.Errorf("%w: password connection mode required", ErrInvalidInput)
 		}
 
 		final, err = finalizePasswordModeInput(addIn.ToPasswordModeInput())
@@ -137,7 +137,7 @@ func setupPasswordFlow(ctx context.Context, in PasswordModeInput, configPath str
 		return passwordSetupState{}, err
 	}
 	if exists {
-		return passwordSetupState{}, fmt.Errorf("%w: %q（请换别名或手动编辑 config）", config.ErrHostExists, in.Alias)
+		return passwordSetupState{}, fmt.Errorf("%w: %q(choose a different alias or edit config manually)", config.ErrHostExists, in.Alias)
 	}
 
 	state := passwordSetupState{configExistedBefore: configFileExists(configPath)}
