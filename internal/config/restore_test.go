@@ -1,9 +1,9 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -137,7 +137,7 @@ func TestAppendHost_rejectsDuplicateAlias(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected duplicate error")
 	}
-	if !strings.Contains(err.Error(), "已存在") {
-		t.Errorf("err = %v", err)
+	if !errors.Is(err, ErrHostExists) {
+		t.Errorf("err = %v, want ErrHostExists", err)
 	}
 }
