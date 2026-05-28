@@ -13,12 +13,12 @@ func TestPasswordTestField_handleTestDoneOnlyAdvancesOnce(t *testing.T) {
 	var in PasswordModeInput
 	f := NewPasswordTestField(context.Background(), &in, nil, nil, nil)
 
-	_, cmd1 := f.handleTestDone(pwTestDoneMsg{elapsed: 10 * time.Millisecond})
+	_, cmd1 := f.handleTestDone(testDoneMsg{elapsed: 10 * time.Millisecond})
 	if cmd1 == nil {
 		t.Fatal("first success should advance to alias")
 	}
 
-	_, cmd2 := f.handleTestDone(pwTestDoneMsg{elapsed: 10 * time.Millisecond})
+	_, cmd2 := f.handleTestDone(testDoneMsg{elapsed: 10 * time.Millisecond})
 	if cmd2 != nil {
 		t.Fatal("duplicate success should not advance again")
 	}
@@ -32,7 +32,7 @@ func TestPasswordTestField_downAdvancesWithoutTest(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("down should advance without starting test")
 	}
-	if f.state == pwStateTesting {
+	if f.state == testStateTesting {
 		t.Fatal("down must not start connection test")
 	}
 }
@@ -45,7 +45,7 @@ func TestPasswordTestField_tabDoesNotAdvanceOrTest(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("tab should not advance credential field")
 	}
-	if f.state == pwStateTesting {
+	if f.state == testStateTesting {
 		t.Fatal("tab must not start connection test")
 	}
 }
@@ -58,7 +58,7 @@ func TestPasswordTestField_upGoesPrevWithoutTest(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("want PrevField on up")
 	}
-	if f.state == pwStateTesting {
+	if f.state == testStateTesting {
 		t.Fatal("up must not start connection test")
 	}
 }
@@ -71,7 +71,7 @@ func TestPasswordTestField_enterStartsTest(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("enter should start test")
 	}
-	if f.state != pwStateTesting {
+	if f.state != testStateTesting {
 		t.Fatalf("state = %v, want testing", f.state)
 	}
 }
@@ -83,14 +83,14 @@ func TestPasswordTestField_OKStateAllowsEditing(t *testing.T) {
 		func() { authOK = true },
 		func() { authOK = false },
 	)
-	f.state = pwStateOK
+	f.state = testStateOK
 	f.elapsed = 10 * time.Millisecond
 	f.textinput.SetValue("secret")
 	f.accessor.Set("secret")
 	authOK = true
 
 	_, _ = f.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}})
-	if f.state != pwStateEdit {
+	if f.state != testStateEdit {
 		t.Fatalf("state = %v, want edit after typing in OK", f.state)
 	}
 	if authOK {
@@ -119,12 +119,12 @@ func TestKeyIdentityField_handleTestDoneOnlyAdvancesOnce(t *testing.T) {
 	var in KeyModeInput
 	f := NewKeyIdentityField(context.Background(), &in, nil, nil, nil)
 
-	_, cmd1 := f.handleTestDone(keyIDDoneMsg{elapsed: 10 * time.Millisecond})
+	_, cmd1 := f.handleTestDone(testDoneMsg{elapsed: 10 * time.Millisecond})
 	if cmd1 == nil {
 		t.Fatal("first success should advance to alias")
 	}
 
-	_, cmd2 := f.handleTestDone(keyIDDoneMsg{elapsed: 10 * time.Millisecond})
+	_, cmd2 := f.handleTestDone(testDoneMsg{elapsed: 10 * time.Millisecond})
 	if cmd2 != nil {
 		t.Fatal("duplicate success should not advance again")
 	}

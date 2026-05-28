@@ -1,12 +1,10 @@
 package wizard
 
 import (
-	"errors"
 	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/fuckssh/fuckssh/internal/i18n"
@@ -14,77 +12,70 @@ import (
 
 // hostField 主机地址输入，空值时内联展示「不能为空」。
 type hostField struct {
-	accessor huh.Accessor[string]
-	onValid  func()
-
-	key   string
-	id    int
-	title string
-
-	textinput textinput.Model
+	baseField // 嵌入共有逻辑
+	onValid   func()
 	inlineMsg string
-
-	focused    bool
-	accessible bool
-	width      int
-	height     int
-	theme      *huh.Theme
-	keymap     huh.InputKeyMap
-}
-
-var hostFieldIDSeq int
-
-func nextHostFieldID() int {
-	hostFieldIDSeq++
-	return hostFieldIDSeq
 }
 
 // NewHostField 创建主机地址字段。
 func NewHostField(onValid func()) *hostField {
-	ti := textinput.New()
-	ti.CharLimit = 256
-	ti.Placeholder = hostInputPlaceholder()
+	ti := newTextInput(256, hostInputPlaceholder())
 
 	return &hostField{
-		onValid:   onValid,
-		accessor:  &huh.EmbeddedAccessor[string]{},
-		id:        nextHostFieldID(),
-		textinput: ti,
-		keymap:    wizardInputKeyMap(),
+		baseField: baseField{
+			accessor:  &huh.EmbeddedAccessor[string]{},
+			id:        nextBaseFieldID(),
+			textinput: ti,
+			keymap:    wizardInputKeyMap(),
+		},
+		onValid: onValid,
 	}
 }
 
-func (f *hostField) Value(v *string) *hostField {
-	f.accessor = huh.NewPointerAccessor(v)
-	f.textinput.SetValue(f.accessor.Get())
-	return f
+// --- Builder 方法（返回 *hostField 支持链式调用） ---
+
+func (f *hostField) Value(v *string) *hostField { f.setValue(v); return f }
+func (f *hostField) Key(k string) *hostField    { f.setKey(k); return f }
+func (f *hostField) Title(t string) *hostField  { f.setTitle(t); return f }
+
+// --- 委托给 baseField 的通用方法 ---
+
+func (f *hostField) Init() tea.Cmd           { return f.baseField.Init() }
+func (f *hostField) Error() error            { return f.baseField.Error() }
+func (f *hostField) Skip() bool              { return f.baseField.Skip() }
+func (f *hostField) Zoom() bool              { return f.baseField.Zoom() }
+func (f *hostField) Focus() tea.Cmd          { return f.baseField.Focus() }
+func (f *hostField) KeyBinds() []key.Binding { return f.baseField.KeyBinds() }
+func (f *hostField) Run() error              { return huh.Run(f) }
+func (f *hostField) RunAccessible(w io.Writer, r io.Reader) error {
+	return f.baseField.RunAccessible(w, r)
 }
 
-func (f *hostField) Key(k string) *hostField {
-	f.key = k
+func (f *hostField) WithTheme(theme *huh.Theme) huh.Field { f.baseField.WithTheme(theme); return f }
+func (f *hostField) WithAccessible(a bool) huh.Field      { f.baseField.WithAccessible(a); return f }
+func (f *hostField) WithKeyMap(k *huh.KeyMap) huh.Field   { f.baseField.WithKeyMap(k); return f }
+func (f *hostField) WithWidth(w int) huh.Field            { f.baseField.WithWidth(w); return f }
+func (f *hostField) WithHeight(h int) huh.Field           { f.baseField.WithHeight(h); return f }
+func (f *hostField) WithPosition(p huh.FieldPosition) huh.Field {
+	f.baseField.WithPosition(p)
 	return f
 }
+func (f *hostField) GetKey() string { return f.baseField.GetKey() }
+func (f *hostField) GetValue() any  { return f.baseField.GetValue() }
 
-func (f *hostField) Title(title string) *hostField {
-	f.title = title
-	return f
-}
+// --- hostField 自己的差异逻辑 ---
 
-func (f *hostField) activeStyles() *huh.FieldStyles {
-	if f.theme == nil {
-		f.theme = WizardTheme()
-	}
-	if f.focused {
-		return &f.theme.Focused
-	}
-	return &f.theme.Blurred
+// Blur 覆盖 baseField.Blur，对输入值做 TrimSpace 处理。
+func (f *hostField) Blur() tea.Cmd {
+	f.focused = false
+	f.textinput.Blur()
+	f.accessor.Set(strings.TrimSpace(f.textinput.Value()))
+	return nil
 }
 
 func (f *hostField) validate(raw string) error {
 	return nonEmpty(i18n.T(i18n.KeyWizardErrEmpty))(raw)
 }
-
-func (f *hostField) Init() tea.Cmd { return nil }
 
 func (f *hostField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -127,11 +118,7 @@ func (f *hostField) View() string {
 	frame := styles.Base.GetHorizontalFrameSize()
 	maxWidth := f.width - frame
 
-	f.textinput.PlaceholderStyle = styles.TextInput.Placeholder
-	f.textinput.PromptStyle = styles.TextInput.Prompt
-	f.textinput.Cursor.Style = styles.TextInput.Cursor
-	f.textinput.Cursor.TextStyle = styles.TextInput.CursorText
-	f.textinput.TextStyle = styles.TextInput.Text
+	f.applyTextInputStyles(styles)
 
 	var below []string
 	if f.inlineMsg != "" {
@@ -139,70 +126,3 @@ func (f *hostField) View() string {
 	}
 	return renderInlineField(f.width, f.height, styles, f.title, f.textinput.View(), below...)
 }
-
-func (f *hostField) Error() error { return nil }
-func (f *hostField) Skip() bool   { return false }
-func (f *hostField) Zoom() bool   { return false }
-
-func (f *hostField) Focus() tea.Cmd {
-	f.focused = true
-	return f.textinput.Focus()
-}
-
-func (f *hostField) Blur() tea.Cmd {
-	f.focused = false
-	f.textinput.Blur()
-	f.accessor.Set(strings.TrimSpace(f.textinput.Value()))
-	return nil
-}
-
-func (f *hostField) KeyBinds() []key.Binding {
-	return []key.Binding{f.keymap.Prev, f.keymap.Submit, f.keymap.Next}
-}
-
-func (f *hostField) Run() error { return huh.Run(f) }
-
-func (f *hostField) RunAccessible(w io.Writer, r io.Reader) error {
-	_ = w
-	_ = r
-	return errors.New("host field: accessible mode not supported")
-}
-
-func (f *hostField) WithTheme(theme *huh.Theme) huh.Field {
-	if theme != nil && f.theme == nil {
-		f.theme = theme
-	}
-	return f
-}
-
-func (f *hostField) WithAccessible(accessible bool) huh.Field {
-	f.accessible = accessible
-	return f
-}
-
-func (f *hostField) WithKeyMap(k *huh.KeyMap) huh.Field {
-	if k != nil {
-		f.keymap = k.Input
-		f.textinput.KeyMap.AcceptSuggestion = f.keymap.AcceptSuggestion
-	}
-	return f
-}
-
-func (f *hostField) WithWidth(width int) huh.Field {
-	f.width = width
-	setInlineInputWidth(width, f.activeStyles(), f.title, &f.textinput)
-	return f
-}
-
-func (f *hostField) WithHeight(height int) huh.Field {
-	f.height = height
-	return f
-}
-
-func (f *hostField) WithPosition(p huh.FieldPosition) huh.Field {
-	applyInputNavPosition(&f.keymap, p)
-	return f
-}
-
-func (f *hostField) GetKey() string { return f.key }
-func (f *hostField) GetValue() any  { return f.accessor.Get() }

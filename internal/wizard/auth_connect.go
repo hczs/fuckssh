@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/fuckssh/fuckssh/internal/i18n"
-	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/platform"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 )
@@ -38,16 +37,6 @@ func defaultKeyAuthTest(ctx context.Context, in KeyModeInput) error {
 		User:         effectiveUser(in.User),
 		IdentityFile: expanded,
 	})
-}
-
-func keyConnectionTestFailureMessage(err error) string {
-	if errors.Is(err, keys.ErrPassphraseNotSupported) {
-		return i18n.T(i18n.KeyWizardPassphraseNA)
-	}
-	if errors.Is(err, sshclient.ErrDeployAuthFailed) {
-		return i18n.T(i18n.KeyWizardKeyAuthFailed)
-	}
-	return connectionTestFailureMessage(err)
 }
 
 // testPasswordConnection 执行密码测连并返回耗时（供单测与自定义字段共用）。
