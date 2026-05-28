@@ -9,7 +9,7 @@ import (
 // RestoreFromBackup 用备份文件覆盖当前 config（用于 add 失败回滚）。
 func RestoreFromBackup(backupPath, configPath string) error {
 	if backupPath == "" {
-		return fmt.Errorf("config: 无备份路径，无法恢复")
+		return fmt.Errorf("config: empty backup path, cannot restore")
 	}
 	src, err := os.Open(backupPath)
 	if err != nil {
@@ -46,9 +46,4 @@ func RollbackAfterAddFailure(configPath, backupPath string, configExistedBefore,
 		return err
 	}
 	return nil
-}
-
-// RollbackConfig 兼容旧调用，等价于 configModified=true。
-func RollbackConfig(configPath, backupPath string, configExistedBefore bool) error {
-	return RollbackAfterAddFailure(configPath, backupPath, configExistedBefore, true)
 }

@@ -1,6 +1,8 @@
 module github.com/fuckssh/fuckssh
 
-go 1.26.2
+go 1.26
+
+toolchain go1.26.2
 
 require (
 	github.com/charmbracelet/bubbles v0.21.1-0.20250623103423-23b8fd6302d7

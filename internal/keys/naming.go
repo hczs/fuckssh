@@ -53,11 +53,6 @@ func NormalizeHostAlias(alias string) string {
 	return strings.Trim(s, "-")
 }
 
-// SanitizeAlias 与 NormalizeHostAlias 相同，保留旧名供调用方过渡。
-func SanitizeAlias(alias string) string {
-	return NormalizeHostAlias(alias)
-}
-
 func defaultAliasSuffix() string {
 	host, err := os.Hostname()
 	if err != nil || host == "" {
