@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/fuckssh/fuckssh/internal/sshclient"
+	"github.com/fuckssh/fuckssh/internal/config"
 )
 
 func Test_Search_matchesAliasViaCmd(t *testing.T) {
@@ -41,18 +44,37 @@ func Test_Search_noMatch_returnsEmptyWithHint(t *testing.T) {
 	}
 }
 
-func Test_Search_emptyQuery_returnsUsageError(t *testing.T) {
-	err := runSearchCmd([]string{""}, &bytes.Buffer{}, &bytes.Buffer{})
+func Test_Search_invalidConfig_returnsParseError(t *testing.T) {
+	configFileFlag = fixtureConfig("invalid.conf")
+	t.Cleanup(func() { configFileFlag = "" })
+
+	var stdout, stderr bytes.Buffer
+	err := runSearchCmd([]string{"foo"}, &stdout, &stderr)
 	if err == nil {
-		t.Fatal("expected usage error for empty query")
+		t.Fatal("expected parse error")
 	}
-	if !strings.Contains(err.Error(), "非空") && !strings.Contains(err.Error(), "empty") {
-		t.Errorf("err = %v, want empty-query message", err)
+	var pe *config.ParseError
+	if !errors.As(err, &pe) {
+		t.Fatalf("error type = %T, want *config.ParseError", err)
+	}
+	if got := ExitCode(err); got != 2 {
+		t.Errorf("ExitCode = %d, want 2 for parse error", got)
 	}
 }
 
-func TestExitCode_sshNotFound(t *testing.T) {
-	if got := ExitCode(sshclient.ErrSSHNotFound); got != 5 {
-		t.Errorf("ssh not found = %d, want 5", got)
+func Test_Search_missingConfig_returnsExitCode3(t *testing.T) {
+	configFileFlag = filepath.Join(t.TempDir(), "no-such-config.conf")
+	t.Cleanup(func() { configFileFlag = "" })
+
+	var stdout, stderr bytes.Buffer
+	err := runSearchCmd([]string{"foo"}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected error for missing config")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("err = %v, want os.ErrNotExist", err)
+	}
+	if got := ExitCode(err); got != 3 {
+		t.Errorf("ExitCode = %d, want 3 for missing file", got)
 	}
 }

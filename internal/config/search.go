@@ -18,14 +18,18 @@ func FilterHosts(entries []HostEntry, query string) []HostEntry {
 	return matched
 }
 
+// hostMatchesQuery 判断 entry 是否匹配 query（query 已由调用方 ToLower）。
+// 每个字段只调一次 ToLower，避免重复转换。
 func hostMatchesQuery(e HostEntry, query string) bool {
 	for _, alias := range e.Aliases {
 		if strings.Contains(strings.ToLower(alias), query) {
 			return true
 		}
 	}
-	if strings.Contains(strings.ToLower(e.HostName), query) {
+	host := strings.ToLower(e.HostName)
+	if strings.Contains(host, query) {
 		return true
 	}
-	return strings.Contains(strings.ToLower(e.Remark), query)
+	remark := strings.ToLower(e.Remark)
+	return strings.Contains(remark, query)
 }

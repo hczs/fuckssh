@@ -31,9 +31,6 @@ func searchArgs(cmd *cobra.Command, args []string) error {
 
 func runSearchCmd(args []string, stdout, stderr io.Writer) error {
 	query := strings.TrimSpace(args[0])
-	if query == "" {
-		return fmt.Errorf("%s", i18n.T(i18n.KeySearchEmptyQ))
-	}
 
 	path, err := ConfigFilePath()
 	if err != nil {
