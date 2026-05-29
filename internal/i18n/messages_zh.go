@@ -97,6 +97,7 @@ var messagesZH = map[string]string{
 	KeyWizardProgressWriteCfg:  "正在写入 SSH config…",
 	KeyWizardProgressStageKey:  "正在整理私钥到 keys 目录…",
 	KeyWizardProgressDeployKey: "正在写入公钥到服务器…",
+	KeyWizardProgressTestConn:  "正在测试连通性…",
 	KeyWizardConfirmHostKey:    "  · 安全提示：当前不校验服务器 Host Key（存在中间人风险），后续版本将支持 known_hosts",
 	KeyWizardErrFillBasic:      "请填写 IP/域名、用户名与私钥路径",
 	KeyWizardErrKeyMissing:     "私钥不存在: %s",

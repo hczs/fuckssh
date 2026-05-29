@@ -70,6 +70,7 @@ const (
 	KeyWizardProgressWriteCfg    = "wizard.progress_write_cfg"
 	KeyWizardProgressStageKey    = "wizard.progress_stage_key"
 	KeyWizardProgressDeployKey   = "wizard.progress_deploy_pubkey"
+	KeyWizardProgressTestConn    = "wizard.progress_test_conn"
 	KeyWizardConfirmHostKey      = "wizard.confirm_hostkey"
 	KeyWizardErrFillBasic        = "wizard.err_fill_basic"
 	KeyWizardErrKeyMissing       = "wizard.err_key_missing"

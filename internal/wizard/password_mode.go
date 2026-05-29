@@ -81,13 +81,12 @@ func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, str
 		return nil, "", err
 	}
 
-	deps := defaultPasswordFlowDeps(sshDir)
+	deps := defaultPasswordFlowDeps(sshDir, 0, 4)
 	return executePasswordFlow(ctx, final, configPath, deps)
 }
 
-func defaultPasswordFlowDeps(sshDir string) passwordFlowDeps {
-	const progressTotal = 4
-	var step int
+func defaultPasswordFlowDeps(sshDir string, initialStep, progressTotal int) passwordFlowDeps {
+	step := initialStep
 	advance := func(msg string) {
 		step++
 		reportProgressStep(step, progressTotal, msg)

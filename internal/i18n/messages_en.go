@@ -97,6 +97,7 @@ var messagesEN = map[string]string{
 	KeyWizardProgressWriteCfg:  "Writing SSH config…",
 	KeyWizardProgressStageKey:  "Staging private key in keys/…",
 	KeyWizardProgressDeployKey: "Installing public key on server…",
+	KeyWizardProgressTestConn:  "Testing connection…",
 	KeyWizardConfirmHostKey:    "  · Security: server Host Key is not verified yet (MITM risk). known_hosts support is planned.",
 	KeyWizardErrFillBasic:      "fill IP/hostname, username, and private key path",
 	KeyWizardErrKeyMissing:     "private key not found: %s",

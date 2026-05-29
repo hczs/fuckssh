@@ -42,7 +42,7 @@ func TestRunKeyFlow_callsDepsInOrder(t *testing.T) {
 		Port:         "22",
 		IdentityFile: key,
 	}
-	if err := runKeyFlow(cfg, result, deps); err != nil {
+	if err := runKeyFlow(cfg, result, deps, 0, KeyFlowProgressTotal); err != nil {
 		t.Fatalf("runKeyFlow: %v", err)
 	}
 	want := []string{"backup", "stageKey", "appendHost"}
