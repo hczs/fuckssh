@@ -129,11 +129,14 @@ func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// isReadonlyCmd 判断是否为只读子命令（跳过交互式语言选择以加快响应）。
+// isReadonlyCmd 判断是否为只读/非交互子命令（跳过交互式语言选择以加快响应）。
+// add 命令带 --host 时为非交互模式，同样跳过。
 func isReadonlyCmd(cmd *cobra.Command) bool {
 	switch cmd.Name() {
 	case "list", "search":
 		return true
+	case "add":
+		return isNonInteractive()
 	default:
 		return false
 	}

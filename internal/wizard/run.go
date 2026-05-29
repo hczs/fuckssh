@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/platform"
 )
 
@@ -85,9 +86,65 @@ func runPasswordFromAddInput(ctx context.Context, configPath string, in AddInput
 	if err != nil {
 		return nil, "", nil, err
 	}
-	deps := defaultPasswordFlowDeps(sshDir)
+	deps := defaultPasswordFlowDeps(sshDir, 0, 4)
 	result, bakPath, err := executePasswordFlow(ctx, final, configPath, deps)
 	return result, bakPath, nil, err
+}
+
+// RunNonInteractive 跳过 TUI 交互与确认页，直接校验 → 测连 → 执行。
+// 供 add 命令的非交互模式（--host 等 flag）调用。
+// 密码模式返回 PasswordFlowComplete=true；密钥模式返回后由调用方执行 RunKeyFlow。
+func RunNonInteractive(configPath string, in AddInput) (*WizardResult, error) {
+	if strings.TrimSpace(configPath) == "" {
+		return nil, fmt.Errorf("%w: config path must not be empty", ErrInvalidInput)
+	}
+
+	ctx := context.Background()
+
+	switch in.Mode {
+	case ModePassword:
+		final, err := finalizePasswordModeInput(in.ToPasswordModeInput())
+		if err != nil {
+			return nil, err
+		}
+		// 先测连通性，通过后再动本地文件
+		reportProgressStep(1, 5, i18n.T(i18n.KeyWizardProgressTestConn))
+		if err := defaultPasswordAuthTest(ctx, final); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidInput, connectionTestFailureMessage(err))
+		}
+		sshDir, err := platform.SSHDir()
+		if err != nil {
+			return nil, err
+		}
+		deps := defaultPasswordFlowDeps(sshDir, 1, 5)
+		result, _, err := executePasswordFlow(ctx, final, configPath, deps)
+		if result != nil {
+			result.PasswordFlowComplete = true
+		}
+		return result, err
+
+	case ModeKey:
+		final, err := finalizeKeyModeInput(in.ToKeyModeInput(), os.Stat)
+		if err != nil {
+			return nil, err
+		}
+		// 先测连通性，通过后再动本地文件
+		reportProgressStep(1, 4, i18n.T(i18n.KeyWizardProgressTestConn))
+		if err := defaultKeyAuthTest(ctx, final); err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidInput, connectionTestFailureMessage(err))
+		}
+		return &WizardResult{
+			Alias:        final.Alias,
+			HostName:     final.HostName,
+			User:         final.User,
+			Port:         final.Port,
+			IdentityFile: final.IdentityFile,
+			Remark:       final.Remark,
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("%w: unknown connection mode", ErrInvalidInput)
+	}
 }
 
 // runKeyFromAddInput 校验、确认并返回密钥模式结果（写盘由 cmd 侧 RunKeyFlow 完成）。

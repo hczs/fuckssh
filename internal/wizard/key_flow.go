@@ -30,24 +30,31 @@ func defaultKeyFlowDeps() keyFlowDeps {
 
 // RunKeyFlow 在向导收集完密钥模式输入后，执行备份、落盘私钥与追加 config。
 func RunKeyFlow(configPath string, result *WizardResult) error {
-	return runKeyFlow(configPath, result, defaultKeyFlowDeps())
+	return runKeyFlow(configPath, result, defaultKeyFlowDeps(), 0, KeyFlowProgressTotal)
 }
 
-func runKeyFlow(configPath string, result *WizardResult, deps keyFlowDeps) error {
+// RunKeyFlowWithProgress 同 RunKeyFlow，但支持自定义进度起始步数与总数（供非交互模式接入前置步骤）。
+func RunKeyFlowWithProgress(configPath string, result *WizardResult, initialStep, total int) error {
+	return runKeyFlow(configPath, result, defaultKeyFlowDeps(), initialStep, total)
+}
+
+func runKeyFlow(configPath string, result *WizardResult, deps keyFlowDeps, initialStep, total int) error {
 	if result == nil {
 		return ErrInvalidInput
 	}
 
 	configExisted := configFileExists(configPath)
-	total := KeyFlowProgressTotal
+	step := initialStep
 
-	deps.onProgress(1, total, i18n.T(i18n.KeyWizardProgressBackup))
+	step++
+	deps.onProgress(step, total, i18n.T(i18n.KeyWizardProgressBackup))
 	bakPath, err := deps.backup(configPath)
 	if err != nil {
 		return err
 	}
 
-	deps.onProgress(2, total, i18n.T(i18n.KeyWizardProgressStageKey))
+	step++
+	deps.onProgress(step, total, i18n.T(i18n.KeyWizardProgressStageKey))
 	destPriv, copied, err := deps.stageKey(result.Alias, result.IdentityFile)
 	if err != nil {
 		_ = config.RollbackAfterAddFailure(configPath, bakPath, configExisted, false)
@@ -63,7 +70,8 @@ func runKeyFlow(configPath string, result *WizardResult, deps keyFlowDeps) error
 		return err
 	}
 
-	deps.onProgress(3, total, i18n.T(i18n.KeyWizardProgressWriteCfg))
+	step++
+	deps.onProgress(step, total, i18n.T(i18n.KeyWizardProgressWriteCfg))
 	entry := config.HostEntry{
 		Alias:        result.Alias,
 		HostName:     result.HostName,
