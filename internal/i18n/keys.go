@@ -10,6 +10,8 @@ const (
 	KeyListLong     = "cmd.list.long"
 	KeySearchShort  = "cmd.search.short"
 	KeySearchLong   = "cmd.search.long"
+	KeyVersionShort = "cmd.version.short"
+	KeyVersionLong  = "cmd.version.long"
 	KeyConfigFlag   = "cmd.config_flag"
 	KeyCmdElapsedMs = "cmd.elapsed_ms"
 

@@ -13,6 +13,8 @@ var messagesZH = map[string]string{
 	KeyListLong:     "解析并展示本机 ~/.ssh/config 中的所有 Host 条目；同一 Host 行的多个别名以逗号分隔显示。",
 	KeySearchShort:  "按别名、地址或 IP 搜索 Host",
 	KeySearchLong:   "在别名、HostName、IP 中进行关键词匹配。",
+	KeyVersionShort: "查看版本信息",
+	KeyVersionLong:  "输出 fuckssh 版本号、commit hash 与构建日期。",
 	KeyConfigFlag:   "ssh config 文件路径（默认 ~/.ssh/config）",
 	KeyCmdElapsedMs: "执行耗时 %d ms\n",
 

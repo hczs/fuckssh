@@ -132,7 +132,7 @@ func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 // isReadonlyCmd 判断是否为只读子命令（跳过交互式语言选择以加快响应）。
 func isReadonlyCmd(cmd *cobra.Command) bool {
 	switch cmd.Name() {
-	case "list", "search":
+	case "list", "search", "version":
 		return true
 	default:
 		return false

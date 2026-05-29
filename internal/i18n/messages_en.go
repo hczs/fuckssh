@@ -13,6 +13,8 @@ var messagesEN = map[string]string{
 	KeyListLong:     "Parse and display all Host entries in your ssh config file. Multiple aliases on one Host line are shown comma-separated.",
 	KeySearchShort:  "Search hosts by alias, hostname, or IP",
 	KeySearchLong:   "Match hosts by alias, HostName, or IP substring.",
+	KeyVersionShort: "Print version information",
+	KeyVersionLong:  "Print the fuckssh version, commit hash, and build date.",
 	KeyConfigFlag:   "path to ssh config file (default: ~/.ssh/config)",
 	KeyCmdElapsedMs: "Elapsed: %d ms\n",
 
