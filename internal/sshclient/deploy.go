@@ -32,7 +32,7 @@ type AuthorizedKeysNotWritableError struct {
 
 func (e *AuthorizedKeysNotWritableError) Error() string {
 	return fmt.Sprintf(
-		"当前用户 %q 对文件 %q 没有写权限。请手动执行: ssh %s，登录后执行:\n  %s",
+		"user %q has no write permission on %q; run: ssh %s, then:\n  %s",
 		e.User, e.AbsPath, e.SSHCommand, e.FixCommand,
 	)
 }
@@ -66,10 +66,10 @@ const deployMaxAttempts = 3 // 首次 + 最多 2 次重试
 // TestPasswordAuth 仅验证能否用密码建立 SSH 连接（向导填完密码后「测试连接」用）。
 func TestPasswordAuth(ctx context.Context, opts DeployOpts) error {
 	if strings.TrimSpace(opts.Host) == "" || strings.TrimSpace(opts.User) == "" {
-		return fmt.Errorf("%w: Host 与 User 不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: Host and User must not be empty", ErrDeployFailed)
 	}
 	if strings.TrimSpace(opts.Password) == "" {
-		return fmt.Errorf("%w: 密码不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: password must not be empty", ErrDeployFailed)
 	}
 	client, err := dialSSH(ctx, opts)
 	if err != nil {
@@ -83,13 +83,13 @@ func TestPasswordAuth(ctx context.Context, opts DeployOpts) error {
 // MVP 使用 InsecureIgnoreHostKey，生产环境应加强 host key 校验（见架构待办）。
 func DeployPublicKey(ctx context.Context, opts DeployOpts) error {
 	if strings.TrimSpace(opts.Host) == "" || strings.TrimSpace(opts.User) == "" {
-		return fmt.Errorf("%w: Host 与 User 不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: Host and User must not be empty", ErrDeployFailed)
 	}
 	if strings.TrimSpace(opts.Password) == "" {
-		return fmt.Errorf("%w: 密码不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: password must not be empty", ErrDeployFailed)
 	}
 	if strings.TrimSpace(opts.PublicLine) == "" {
-		return fmt.Errorf("%w: 公钥不能为空", ErrDeployFailed)
+		return fmt.Errorf("%w: public key must not be empty", ErrDeployFailed)
 	}
 
 	var lastErr error
@@ -120,7 +120,7 @@ func deployOnce(ctx context.Context, opts DeployOpts) error {
 	defer func() { _ = client.Close() }()
 
 	if err := runRemote(client, "mkdir -p ~/.ssh && chmod 700 ~/.ssh"); err != nil {
-		return fmt.Errorf("%w: 创建 ~/.ssh: %v", ErrDeployFailed, err)
+		return fmt.Errorf("%w: create ~/.ssh: %v", ErrDeployFailed, err)
 	}
 
 	if err := ensureAuthorizedKeysWritable(client, opts); err != nil {
@@ -129,7 +129,7 @@ func deployOnce(ctx context.Context, opts DeployOpts) error {
 
 	existing, err := runRemoteOutput(client, "cat ~/.ssh/authorized_keys 2>/dev/null || true")
 	if err != nil {
-		return fmt.Errorf("%w: 读取 authorized_keys: %v", ErrDeployFailed, err)
+		return fmt.Errorf("%w: read authorized_keys: %v", ErrDeployFailed, err)
 	}
 	newContent := appendAuthorizedKey(existing, opts.PublicLine)
 	if err := client.WriteAuthorizedKeys([]byte(newContent)); err != nil {
@@ -141,7 +141,7 @@ func deployOnce(ctx context.Context, opts DeployOpts) error {
 			}
 			return wrapAuthorizedKeysNotWritable(opts, absPath)
 		}
-		return fmt.Errorf("%w: 写入 authorized_keys: %v", ErrDeployFailed, err)
+		return fmt.Errorf("%w: write authorized_keys: %v", ErrDeployFailed, err)
 	}
 	return nil
 }
@@ -150,14 +150,14 @@ func deployOnce(ctx context.Context, opts DeployOpts) error {
 func ensureAuthorizedKeysWritable(client sshClient, opts DeployOpts) error {
 	absPath, err := remoteAuthorizedKeysPath(client)
 	if err != nil {
-		return fmt.Errorf("%w: 检查 authorized_keys 权限: %v", ErrDeployFailed, err)
+		return fmt.Errorf("%w: check authorized_keys permissions: %v", ErrDeployFailed, err)
 	}
 	if absPath == "" {
 		return nil // 文件不存在，写入时会新建
 	}
 	writable, err := remoteFileWritable(client, absPath)
 	if err != nil {
-		return fmt.Errorf("%w: 检查 authorized_keys 权限: %v", ErrDeployFailed, err)
+		return fmt.Errorf("%w: check authorized_keys permissions: %v", ErrDeployFailed, err)
 	}
 	if writable {
 		return nil

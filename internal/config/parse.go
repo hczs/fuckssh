@@ -72,7 +72,7 @@ func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 					File:    filename,
 					Line:    lineNum,
 					Snippet: raw,
-					Msg:     "Host 需要至少一个别名",
+					Msg:     "Host requires at least one alias",
 				}
 			}
 			aliases := strings.Fields(value)
@@ -95,7 +95,7 @@ func Parse(r io.Reader, filename string) ([]HostEntry, error) {
 					File:    filename,
 					Line:    lineNum,
 					Snippet: raw,
-					Msg:     "Host 块之外的指令",
+					Msg:     "directive outside Host block",
 				}
 			}
 			// 块内遇到配置项，清空 pendingRemark，防止块内注释泄漏到下一个 Host。
@@ -127,7 +127,7 @@ func splitDirective(line string) (key, value string, err error) {
 		// 空格分隔：value 为第一个 token 之后的部分或整段 fields
 		parts := strings.Fields(line)
 		if len(parts) == 0 {
-			return "", "", fmt.Errorf("空指令")
+			return "", "", fmt.Errorf("empty directive")
 		}
 		key = parts[0]
 		if len(parts) > 1 {

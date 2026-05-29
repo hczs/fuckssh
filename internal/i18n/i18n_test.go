@@ -56,6 +56,7 @@ func TestT_fallbackUnknownKey(t *testing.T) {
 
 func TestEnsureInteractive_nonTTYDefaultsZh(t *testing.T) {
 	ResetForTest()
+	t.Setenv(envLangKey, "")
 	dir := t.TempDir()
 	SetSettingsPathForTest(filepath.Join(dir, "settings.json"))
 	isInteractiveOverride = func(io.Writer) bool { return false }
@@ -70,6 +71,7 @@ func TestEnsureInteractive_nonTTYDefaultsZh(t *testing.T) {
 
 func TestEnsureLoaded_nonTTYDefaultsZh(t *testing.T) {
 	ResetForTest()
+	t.Setenv(envLangKey, "")
 	dir := t.TempDir()
 	SetSettingsPathForTest(filepath.Join(dir, "settings.json"))
 	isInteractiveOverride = func(io.Writer) bool { return true }

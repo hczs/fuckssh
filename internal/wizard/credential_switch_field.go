@@ -11,18 +11,18 @@ import (
 // credentialSwitchField 按认证方式只渲染密码或私钥其一（LayoutStack 下避免两项同屏）。
 type credentialSwitchField struct {
 	mode *ConnectionMode
-	pw   *passwordTestField
-	keyF *keyIdentityField
+	pw   *connectionTestField // 密码测连字段
+	keyF *connectionTestField // 密钥测连字段
 
 	fieldKey string
 }
 
 // NewCredentialSwitchField 创建凭证切换字段。
-func NewCredentialSwitchField(mode *ConnectionMode, pw *passwordTestField, keyF *keyIdentityField) *credentialSwitchField {
+func NewCredentialSwitchField(mode *ConnectionMode, pw *connectionTestField, keyF *connectionTestField) *credentialSwitchField {
 	return &credentialSwitchField{mode: mode, pw: pw, keyF: keyF}
 }
 
-func (f *credentialSwitchField) active() huh.Field {
+func (f *credentialSwitchField) active() *connectionTestField {
 	if f.mode != nil && *f.mode == ModeKey {
 		return f.keyF
 	}
@@ -40,11 +40,13 @@ func (f *credentialSwitchField) Init() tea.Cmd { return f.active().Init() }
 
 func (f *credentialSwitchField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m, cmd := f.active().Update(msg)
-	switch a := m.(type) {
-	case *passwordTestField:
-		f.pw = a
-	case *keyIdentityField:
-		f.keyF = a
+	// 类型断言更新内部引用
+	if ct, ok := m.(*connectionTestField); ok {
+		if f.active() == f.pw {
+			f.pw = ct
+		} else {
+			f.keyF = ct
+		}
 	}
 	return f, cmd
 }

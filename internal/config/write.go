@@ -7,7 +7,7 @@ import (
 )
 
 // ErrHostExists 表示 config 中已有同名 Host 别名。
-var ErrHostExists = fmt.Errorf("config: Host 别名已存在")
+var ErrHostExists = fmt.Errorf("config: host alias already exists")
 
 // AppendHost 在 config 文件末尾追加一个 Host 块（不覆盖已有内容）。
 func AppendHost(path string, entry HostEntry) error {
@@ -18,16 +18,16 @@ func AppendHost(path string, entry HostEntry) error {
 
 func appendHostUnlocked(path string, entry HostEntry) error {
 	if strings.TrimSpace(entry.Alias) == "" {
-		return fmt.Errorf("config: Host 别名不能为空")
+		return fmt.Errorf("config: host alias must not be empty")
 	}
 	if strings.TrimSpace(entry.HostName) == "" {
-		return fmt.Errorf("config: HostName 不能为空")
+		return fmt.Errorf("config: HostName must not be empty")
 	}
 	if strings.TrimSpace(entry.User) == "" {
-		return fmt.Errorf("config: User 不能为空")
+		return fmt.Errorf("config: User must not be empty")
 	}
 	if strings.TrimSpace(entry.IdentityFile) == "" {
-		return fmt.Errorf("config: IdentityFile 不能为空")
+		return fmt.Errorf("config: IdentityFile must not be empty")
 	}
 
 	exists, err := HostAliasExists(path, entry.Alias)
@@ -35,7 +35,7 @@ func appendHostUnlocked(path string, entry HostEntry) error {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("%w: %q（请换别名或手动编辑 config）", ErrHostExists, entry.Alias)
+		return fmt.Errorf("%w: %q (choose a different alias or edit config manually)", ErrHostExists, entry.Alias)
 	}
 
 	port := entry.Port

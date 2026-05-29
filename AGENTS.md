@@ -82,3 +82,4 @@ scripts/                      一键安装脚本（install.sh / install.ps1）
 - [技术选型方案](docs/fuckssh-技术选型.md) — fuckssh 技术选型与架构设计
 - [系统架构设计](docs/fuckssh-架构设计.md) — fuckssh 系统架构设计（含 [HTML 版](docs/fuckssh-架构设计.html)）
 - [脚手架计划](docs/plans/fuckssh-scaffold-plan.md) — fuckssh 脚手架搭建记录
+- [命令执行时序图](docs/command-flow.md) — list / search / add 三条命令的 Mermaid 时序图，含 add 的三阶段流程与失败回滚

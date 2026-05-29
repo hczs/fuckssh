@@ -22,7 +22,7 @@ const (
 // configPath 为 ssh config 路径（别名检测与确认摘要共用）。
 func Run(configPath string) (*WizardResult, error) {
 	if strings.TrimSpace(configPath) == "" {
-		return nil, fmt.Errorf("%w: config 路径不能为空", ErrInvalidInput)
+		return nil, fmt.Errorf("%w: config path must not be empty", ErrInvalidInput)
 	}
 
 	ctx := context.Background()

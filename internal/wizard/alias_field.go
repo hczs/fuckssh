@@ -1,77 +1,44 @@
 package wizard
 
 import (
-	"errors"
 	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 )
 
 // aliasField 在别名输入行内联展示校验错误；留空时根据主机地址实时预览并将生成别名。
 type aliasField struct {
+	baseField  // 嵌入共有逻辑
 	configPath string
 	hostName   *string
-
-	accessor huh.Accessor[string]
-	key      string
-	id       int
-
-	title string
-
-	textinput textinput.Model
-	inlineMsg string
-
-	focused    bool
-	accessible bool
-	width      int
-	height     int
-	theme      *huh.Theme
-	keymap     huh.InputKeyMap
-
-	onAdvance func()
-}
-
-var aliasFieldIDSeq int
-
-func nextAliasFieldID() int {
-	aliasFieldIDSeq++
-	return aliasFieldIDSeq
+	inlineMsg  string
+	onAdvance  func()
 }
 
 // NewAliasField 创建带内联冲突提示的 Host 别名字段。
 func NewAliasField(configPath string, hostName *string) *aliasField {
-	ti := textinput.New()
-	ti.CharLimit = 128
+	ti := newTextInput(128, "")
 
 	return &aliasField{
+		baseField: baseField{
+			accessor:  &huh.EmbeddedAccessor[string]{},
+			id:        nextBaseFieldID(),
+			textinput: ti,
+			keymap:    wizardInputKeyMap(),
+		},
 		configPath: configPath,
 		hostName:   hostName,
-		accessor:   &huh.EmbeddedAccessor[string]{},
-		id:         nextAliasFieldID(),
-		textinput:  ti,
-		keymap:     wizardInputKeyMap(),
 	}
 }
 
-func (f *aliasField) Value(v *string) *aliasField {
-	f.accessor = huh.NewPointerAccessor(v)
-	f.textinput.SetValue(f.accessor.Get())
-	return f
-}
+// --- Builder 方法（返回 *aliasField 支持链式调用） ---
 
-func (f *aliasField) Key(k string) *aliasField {
-	f.key = k
-	return f
-}
-
-func (f *aliasField) Title(title string) *aliasField {
-	f.title = title
-	return f
-}
+func (f *aliasField) Value(v *string) *aliasField { f.setValue(v); return f }
+func (f *aliasField) Key(k string) *aliasField    { f.setKey(k); return f }
+func (f *aliasField) Title(t string) *aliasField  { f.setTitle(t); return f }
 
 // OnAdvance 在别名校验通过并进入下一步时调用。
 func (f *aliasField) OnAdvance(fn func()) *aliasField {
@@ -79,14 +46,55 @@ func (f *aliasField) OnAdvance(fn func()) *aliasField {
 	return f
 }
 
-func (f *aliasField) activeStyles() *huh.FieldStyles {
-	if f.theme == nil {
-		f.theme = WizardTheme()
+// --- 委托给 baseField 的通用方法 ---
+
+func (f *aliasField) Init() tea.Cmd           { return f.baseField.Init() }
+func (f *aliasField) Error() error            { return f.baseField.Error() }
+func (f *aliasField) Skip() bool              { return f.baseField.Skip() }
+func (f *aliasField) Zoom() bool              { return f.baseField.Zoom() }
+func (f *aliasField) KeyBinds() []key.Binding { return f.baseField.KeyBinds() }
+func (f *aliasField) Run() error              { return huh.Run(f) }
+func (f *aliasField) RunAccessible(w io.Writer, r io.Reader) error {
+	return f.baseField.RunAccessible(w, r)
+}
+
+func (f *aliasField) WithTheme(theme *huh.Theme) huh.Field { f.baseField.WithTheme(theme); return f }
+func (f *aliasField) WithAccessible(a bool) huh.Field      { f.baseField.WithAccessible(a); return f }
+func (f *aliasField) WithKeyMap(k *huh.KeyMap) huh.Field   { f.baseField.WithKeyMap(k); return f }
+func (f *aliasField) WithWidth(w int) huh.Field            { f.baseField.WithWidth(w); return f }
+func (f *aliasField) WithHeight(h int) huh.Field           { f.baseField.WithHeight(h); return f }
+func (f *aliasField) WithPosition(p huh.FieldPosition) huh.Field {
+	f.baseField.WithPosition(p)
+	return f
+}
+func (f *aliasField) GetKey() string { return f.baseField.GetKey() }
+func (f *aliasField) GetValue() any  { return f.baseField.GetValue() }
+
+// --- aliasField 自己的差异逻辑 ---
+
+// Focus 覆盖 baseField.Focus，同步 placeholder。
+func (f *aliasField) Focus() tea.Cmd {
+	f.focused = true
+	f.syncPlaceholder()
+	return f.textinput.Focus()
+}
+
+// Blur 覆盖 baseField.Blur，空值时自动填充别名。
+func (f *aliasField) Blur() tea.Cmd {
+	f.focused = false
+	f.textinput.Blur()
+	raw := f.textinput.Value()
+	if strings.TrimSpace(raw) == "" {
+		host := strings.TrimSpace(*f.hostName)
+		if gen := resolveAliasCandidate("", host); gen != "" {
+			f.accessor.Set(gen)
+		} else {
+			f.accessor.Set(raw)
+		}
+	} else {
+		f.accessor.Set(raw)
 	}
-	if f.focused {
-		return &f.theme.Focused
-	}
-	return &f.theme.Blurred
+	return nil
 }
 
 func (f *aliasField) syncPlaceholder() {
@@ -100,8 +108,6 @@ func (f *aliasField) syncPlaceholder() {
 func (f *aliasField) validate(raw string) error {
 	return aliasFieldValidate(f.configPath, f.hostName)(raw)
 }
-
-func (f *aliasField) Init() tea.Cmd { return nil }
 
 func (f *aliasField) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -148,11 +154,7 @@ func (f *aliasField) View() string {
 	maxWidth := f.width - frame
 
 	f.syncPlaceholder()
-	f.textinput.PlaceholderStyle = styles.TextInput.Placeholder
-	f.textinput.PromptStyle = styles.TextInput.Prompt
-	f.textinput.Cursor.Style = styles.TextInput.Cursor
-	f.textinput.Cursor.TextStyle = styles.TextInput.CursorText
-	f.textinput.TextStyle = styles.TextInput.Text
+	f.applyTextInputStyles(styles)
 
 	var below []string
 	if f.inlineMsg != "" {
@@ -160,82 +162,3 @@ func (f *aliasField) View() string {
 	}
 	return renderInlineField(f.width, f.height, styles, f.title, f.textinput.View(), below...)
 }
-
-func (f *aliasField) Error() error { return nil }
-
-func (f *aliasField) Skip() bool { return false }
-func (f *aliasField) Zoom() bool { return false }
-
-func (f *aliasField) Focus() tea.Cmd {
-	f.focused = true
-	f.syncPlaceholder()
-	return f.textinput.Focus()
-}
-
-func (f *aliasField) Blur() tea.Cmd {
-	f.focused = false
-	f.textinput.Blur()
-	raw := f.textinput.Value()
-	if strings.TrimSpace(raw) == "" {
-		host := strings.TrimSpace(*f.hostName)
-		if gen := resolveAliasCandidate("", host); gen != "" {
-			f.accessor.Set(gen)
-		} else {
-			f.accessor.Set(raw)
-		}
-	} else {
-		f.accessor.Set(raw)
-	}
-	return nil
-}
-
-func (f *aliasField) KeyBinds() []key.Binding {
-	return []key.Binding{f.keymap.Prev, f.keymap.Submit, f.keymap.Next}
-}
-
-func (f *aliasField) Run() error { return huh.Run(f) }
-
-func (f *aliasField) RunAccessible(w io.Writer, r io.Reader) error {
-	_ = w
-	_ = r
-	return errors.New("alias field: accessible mode not supported")
-}
-
-func (f *aliasField) WithTheme(theme *huh.Theme) huh.Field {
-	if theme != nil && f.theme == nil {
-		f.theme = theme
-	}
-	return f
-}
-
-func (f *aliasField) WithAccessible(accessible bool) huh.Field {
-	f.accessible = accessible
-	return f
-}
-
-func (f *aliasField) WithKeyMap(k *huh.KeyMap) huh.Field {
-	if k != nil {
-		f.keymap = k.Input
-		f.textinput.KeyMap.AcceptSuggestion = f.keymap.AcceptSuggestion
-	}
-	return f
-}
-
-func (f *aliasField) WithWidth(width int) huh.Field {
-	f.width = width
-	setInlineInputWidth(width, f.activeStyles(), f.title, &f.textinput)
-	return f
-}
-
-func (f *aliasField) WithHeight(height int) huh.Field {
-	f.height = height
-	return f
-}
-
-func (f *aliasField) WithPosition(p huh.FieldPosition) huh.Field {
-	applyInputNavPosition(&f.keymap, p)
-	return f
-}
-
-func (f *aliasField) GetKey() string { return f.key }
-func (f *aliasField) GetValue() any  { return f.accessor.Get() }

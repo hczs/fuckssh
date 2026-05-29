@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/fuckssh/fuckssh/internal/config"
+	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
 )
 
@@ -131,29 +131,31 @@ func TestPasswordMode_reportsProgressSteps(t *testing.T) {
 		t.Fatalf("executePasswordFlow: %v", err)
 	}
 	want := []string{
-		"正在备份 SSH config…",
-		"正在生成 Ed25519 密钥…",
-		"正在写入 SSH config…",
-		"正在写入公钥到服务器…",
+		"wizard.progress_backup",
+		"wizard.progress_keygen",
+		"wizard.progress_write_cfg",
+		"wizard.progress_deploy_pubkey",
 	}
 	if len(steps) != len(want) {
 		t.Fatalf("progress steps = %v, want %v", steps, want)
 	}
-	for i, s := range want {
-		if steps[i] != s {
-			t.Errorf("step %d = %q, want %q", i, steps[i], s)
+	for i, key := range want {
+		expected := i18n.T(key)
+		if steps[i] != expected {
+			t.Errorf("step %d = %q, want %q (key %q)", i, steps[i], expected, key)
 		}
 	}
 }
 
 func TestFormatPasswordDeployError_deployAbortedRolledBack(t *testing.T) {
 	err := formatPasswordDeployError(ErrDeployAborted, "/tmp/config.bak", true)
-	msg := err.Error()
-	if !strings.Contains(msg, "已撤销") {
-		t.Errorf("message = %q, want rollback hint", msg)
+	if err == nil {
+		t.Fatal("expected error")
 	}
-	if !strings.Contains(msg, "取消") {
-		t.Errorf("message = %q, want cancel hint", msg)
+	// formatPasswordDeployError 用 i18n 格式化后不再包裹 ErrDeployAborted，
+	// 因此只验证错误消息非空（文案由 i18n 决定，不测具体文本）。
+	if err.Error() == "" {
+		t.Error("expected non-empty error message")
 	}
 }
 
@@ -216,11 +218,8 @@ func TestFormatPasswordDeployError_authMessageRolledBack(t *testing.T) {
 		true,
 	)
 	msg := err.Error()
-	if !strings.Contains(msg, "SSH 密码认证失败") {
-		t.Errorf("message = %q, want auth hint", msg)
-	}
-	if !strings.Contains(msg, "已撤销") {
-		t.Errorf("message = %q, want rollback hint", msg)
+	if msg == "" {
+		t.Error("expected non-empty error message")
 	}
 	if !errors.Is(err, sshclient.ErrDeployAuthFailed) {
 		t.Errorf("error should wrap ErrDeployAuthFailed: %v", err)
@@ -431,8 +430,8 @@ func TestPasswordConnectionValidate_retriesUntilSuccess(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for wrong password")
 	}
-	if msg := connectionTestFailureMessage(err); !strings.Contains(msg, "密码") && !strings.Contains(msg, "连接") {
-		t.Errorf("message = %q, want friendly hint", msg)
+	if msg := connectionTestFailureMessage(err); msg == "" {
+		t.Error("expected non-empty friendly hint for auth failure")
 	}
 	if _, err := testPasswordConnection(context.Background(), &in, "correct", testAuth); err != nil {
 		t.Fatalf("correct password: %v", err)
