@@ -13,7 +13,7 @@ func TestFormatHostsTable_columnAlignment(t *testing.T) {
 		t.Fatalf("ParseFile: %v", err)
 	}
 
-	out := formatHostsTable(entries)
+	out := formatHostsTable(entries, nil)
 	if !strings.Contains(out, "srv1") || !strings.Contains(out, "srv2") {
 		t.Fatalf("unexpected output:\n%s", out)
 	}
@@ -36,7 +36,7 @@ func TestFormatHostsTable_showsRemark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseFile: %v", err)
 	}
-	out := formatHostsTable(entries)
+	out := formatHostsTable(entries, nil)
 	if !strings.Contains(out, "生产环境主站") || !strings.Contains(out, "测试机") {
 		t.Errorf("output should include remarks:\n%s", out)
 	}

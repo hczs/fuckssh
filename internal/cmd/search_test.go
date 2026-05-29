@@ -27,6 +27,20 @@ func Test_Search_matchesAliasViaCmd(t *testing.T) {
 	}
 }
 
+func Test_Search_multiKeywordOR(t *testing.T) {
+	configFileFlag = fixtureConfig("multiple.conf")
+	t.Cleanup(func() { configFileFlag = "" })
+
+	var stdout, stderr bytes.Buffer
+	if err := runSearchCmd([]string{"srv1", "example"}, &stdout, &stderr); err != nil {
+		t.Fatalf("runSearchCmd: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "srv1") || !strings.Contains(out, "example.com") {
+		t.Fatalf("stdout should contain both srv1 and example.com:\n%s", out)
+	}
+}
+
 func Test_Search_noMatch_returnsEmptyWithHint(t *testing.T) {
 	configFileFlag = fixtureConfig("multiple.conf")
 	t.Cleanup(func() { configFileFlag = "" })
@@ -76,5 +90,55 @@ func Test_Search_missingConfig_returnsExitCode3(t *testing.T) {
 	}
 	if got := ExitCode(err); got != 3 {
 		t.Errorf("ExitCode = %d, want 3 for missing file", got)
+	}
+}
+
+func Test_Search_withUserFlag(t *testing.T) {
+	configFileFlag = fixtureConfig("multiple.conf")
+	t.Cleanup(func() {
+		configFileFlag = ""
+		resetSearchFlags()
+	})
+	searchUserFlag = "admin"
+
+	var stdout, stderr bytes.Buffer
+	if err := runSearchCmd([]string{"srv"}, &stdout, &stderr); err != nil {
+		t.Fatalf("runSearchCmd: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "srv1") || strings.Contains(out, "srv2") {
+		t.Fatalf("stdout should only contain srv1 (user=admin):\n%s", out)
+	}
+}
+
+func Test_Search_withPortFlag(t *testing.T) {
+	configFileFlag = fixtureConfig("multiple.conf")
+	t.Cleanup(func() {
+		configFileFlag = ""
+		resetSearchFlags()
+	})
+	searchPortFlag = "2222"
+
+	var stdout, stderr bytes.Buffer
+	if err := runSearchCmd([]string{"srv"}, &stdout, &stderr); err != nil {
+		t.Fatalf("runSearchCmd: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "srv1") || strings.Contains(out, "srv2") {
+		t.Fatalf("stdout should only contain srv1 (port=2222):\n%s", out)
+	}
+}
+
+func Test_Search_highlightDisabled_pipedOutput(t *testing.T) {
+	// stdout 为 bytes.Buffer（非 TTY），不应包含 ANSI 转义码。
+	configFileFlag = fixtureConfig("multiple.conf")
+	t.Cleanup(func() { configFileFlag = "" })
+
+	var stdout, stderr bytes.Buffer
+	if err := runSearchCmd([]string{"srv1"}, &stdout, &stderr); err != nil {
+		t.Fatalf("runSearchCmd: %v", err)
+	}
+	if strings.Contains(stdout.String(), "\033[") {
+		t.Errorf("piped stdout should not contain ANSI codes:\n%s", stdout.String())
 	}
 }

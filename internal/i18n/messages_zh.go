@@ -142,4 +142,8 @@ var messagesZH = map[string]string{
 	KeyTablePort:     "端口",
 	KeyTableUser:     "用户",
 	KeyTableRemark:   "备注",
+
+	KeySearchFlagUser: "按用户名过滤（大小写不敏感）",
+	KeySearchFlagHost: "按地址子串过滤（大小写不敏感）",
+	KeySearchFlagPort: "按端口号精确过滤",
 }

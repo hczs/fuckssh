@@ -29,5 +29,5 @@ func runList(configPath string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return WriteHostsReport(stdout, stderr, configPath, entries, "")
+	return WriteHostsReport(stdout, stderr, configPath, entries, "", false, nil)
 }

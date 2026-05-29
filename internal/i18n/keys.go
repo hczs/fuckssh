@@ -41,6 +41,10 @@ const (
 	KeyTablePort     = "table.port"
 	KeyTableUser     = "table.user"
 	KeyTableRemark   = "table.remark"
+
+	KeySearchFlagUser = "search.flag_user"
+	KeySearchFlagHost = "search.flag_host"
+	KeySearchFlagPort = "search.flag_port"
 )
 
 // 成功摘要相关文案键。

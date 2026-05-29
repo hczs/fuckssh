@@ -142,4 +142,8 @@ var messagesEN = map[string]string{
 	KeyTablePort:     "PORT",
 	KeyTableUser:     "USER",
 	KeyTableRemark:   "REMARK",
+
+	KeySearchFlagUser: "filter by username (case-insensitive)",
+	KeySearchFlagHost: "filter by hostname substring (case-insensitive)",
+	KeySearchFlagPort: "filter by port number (exact match)",
 }
