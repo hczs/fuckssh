@@ -13,8 +13,9 @@
 ## 特性
 
 - **一站式添加** — `fuckssh add` 引导完成密钥生成、公钥部署（密码模式）与 `ssh config` 写入；支持「已有私钥、仅补 config」模式
+- **非交互模式** — `fuckssh add -H <ip> -P <pass>` 一行命令完成配置，适合脚本与自动化场景；先测连通性再动文件，失败零副作用
 - **只认标准文件** — 不引入私有配置格式；改的是 `~/.ssh/config` 与 `~/.ssh` 下的密钥，未安装本工具时仍可用 `ssh`
-- **列表与搜索** — `list` 展示别名、HostName、端口、用户与备注；`search` 按别名、域名或 IP 模糊匹配
+- **列表与搜索** — `list` 展示别名、HostName、端口、用户与备注；`search` 支持多关键词 OR 搜索、`--user`/`--host`/`--port` 字段过滤与结果高亮
 - **安全习惯** — 修改 config 前自动备份；密码仅用于首次连接，不落盘明文
 - **跨平台** — Windows、macOS、Linux；中英文界面（首次运行可选语言）
 - **终端友好** — 基于 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 的 TUI 向导与表格输出
@@ -81,11 +82,15 @@ go build -o bin/fuckssh ./cmd/fuckssh
 # 添加一台新 VPS（交互式向导）
 fuckssh add
 
+# 非交互模式：一行命令搞定
+fuckssh add -H 1.2.3.4 -u root -P mypass -a myserver
+
 # 列出 ~/.ssh/config 中的 Host
 fuckssh list
 
-# 搜索（别名、HostName、IP）
+# 搜索（多关键词 OR、字段过滤、高亮）
 fuckssh search prod
+fuckssh search --user root --port 2222 web
 
 # 查看版本
 fuckssh version
@@ -105,8 +110,9 @@ ssh <你设置的别名>
 | 命令 | 说明 |
 |------|------|
 | `fuckssh add` | 交互式向导：密码模式（生成密钥 + 部署公钥 + 写 config）或密钥模式（仅写 config） |
+| `fuckssh add -H <ip> -P <pass>` | 非交互模式：一行命令完成配置（`-H` 触发；`-u` 用户、`-p` 端口、`-a` 别名、`-i` 私钥、`-r` 备注） |
 | `fuckssh list` | 解析并表格展示所有 Host；多别名以逗号分隔 |
-| `fuckssh search <query>` | 关键词匹配别名、HostName、IP |
+| `fuckssh search <query>` | 多关键词 OR 搜索；`--user`/`--host`/`--port` 字段过滤；TTY 下结果高亮 |
 | `fuckssh version` | 显示版本、提交与构建时间（Release 构建通过 ldflags 注入） |
 
 **全局选项**
@@ -127,7 +133,7 @@ ssh <你设置的别名>
 
 | 阶段 | 计划能力 |
 |------|----------|
-| **当前 (MVP)** | `add` / `list` / `search`、密码与密钥两种添加路径 |
+| **当前** | `add`（交互 + 非交互）/ `list` / `search`（多关键词 + 字段过滤 + 高亮）/ `version` |
 | **V2** | 加密备份与恢复、`ssh config` + 私钥跨设备同步、别名冲突合并 |
 | **后续** | 列表内编辑/删除 Host 等管理能力 |
 
