@@ -1,11 +1,15 @@
 package cmd
 
 import (
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
 )
+
+// ansiEscape 匹配 ANSI 转义序列，用于计算显示宽度时剥离。
+var ansiEscape = regexp.MustCompile(`\x1b\[[0-9;]*m`)
 
 // formatBorderedTable 把表头与数据行格式化成带框线的 ASCII 表格。
 // 使用 Unicode 框线字符；列宽按终端显示宽度计算（中文占 2 格）。
@@ -55,10 +59,12 @@ func isASCII(s string) bool {
 }
 
 func displayWidth(s string, asciiOnly bool) int {
-	if asciiOnly || isASCII(s) {
-		return len(s)
+	// 剥离 ANSI 转义序列后再计算显示宽度。
+	stripped := ansiEscape.ReplaceAllString(s, "")
+	if asciiOnly || isASCII(stripped) {
+		return len(stripped)
 	}
-	return runewidth.StringWidth(s)
+	return runewidth.StringWidth(stripped)
 }
 
 func columnWidths(headers []string, rows [][]string, asciiOnly bool) []int {

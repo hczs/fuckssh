@@ -52,6 +52,15 @@ func applyLocalizedHelp() {
 	listCmd.Long = i18n.T(i18n.KeyListLong)
 	searchCmd.Short = i18n.T(i18n.KeySearchShort)
 	searchCmd.Long = i18n.T(i18n.KeySearchLong)
+	if f := searchCmd.Flags().Lookup("user"); f != nil {
+		f.Usage = i18n.T(i18n.KeySearchFlagUser)
+	}
+	if f := searchCmd.Flags().Lookup("host"); f != nil {
+		f.Usage = i18n.T(i18n.KeySearchFlagHost)
+	}
+	if f := searchCmd.Flags().Lookup("port"); f != nil {
+		f.Usage = i18n.T(i18n.KeySearchFlagPort)
+	}
 	_ = rootCmd.PersistentFlags().Lookup("config")
 	if f := rootCmd.PersistentFlags().Lookup("config"); f != nil {
 		f.Usage = i18n.T(i18n.KeyConfigFlag)
