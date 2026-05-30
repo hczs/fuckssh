@@ -150,10 +150,7 @@ asset_name() {
 
 	case "${os}" in
 	linux) printf '%s\n' "fuckssh_linux_${arch_suffix}.tar.gz" ;;
-	darwin)
-		# 优先通用包（GoReleaser Arch=all）；旧版 release 可能只有分架构包
-		printf '%s\n' "fuckssh_macos_all.tar.gz"
-		;;
+	darwin) printf '%s\n' "fuckssh_macos_${arch_suffix}.tar.gz" ;;
 	*)
 		err "此脚本仅支持 macOS / Linux；Windows 请使用 scripts/install.ps1"
 		;;
@@ -177,17 +174,12 @@ resolve_tag() {
 	printf '%s\n' "${tag}"
 }
 
-# macOS 通用包不存在时（如 v0.1.0）回退到与 uname -m 对应的分架构包。
+# macOS 分架构包不存在时回退到通用包（GoReleaser Arch=all，兼容旧版 release）。
 asset_name_fallback() {
 	primary="$1"
 	case "${primary}" in
-	fuckssh_macos_all.tar.gz)
-		arch="$(uname -m)"
-		case "${arch}" in
-		x86_64 | amd64) printf '%s\n' "fuckssh_macos_x86_64.tar.gz" ;;
-		aarch64 | arm64) printf '%s\n' "fuckssh_macos_arm64.tar.gz" ;;
-		*) return 1 ;;
-		esac
+	fuckssh_macos_arm64.tar.gz | fuckssh_macos_x86_64.tar.gz)
+		printf '%s\n' "fuckssh_macos_all.tar.gz"
 		;;
 	*)
 		return 1
