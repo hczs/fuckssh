@@ -17,6 +17,7 @@ set -eu
 GITHUB_OWNER="${FUCKSSH_INSTALL_OWNER:-hczs}"
 GITHUB_REPO="${FUCKSSH_INSTALL_REPO:-fuckssh}"
 BIN_NAME="fuckssh"
+ALIAS_NAME="fs"
 DEFAULT_BIN_DIR="${HOME}/.local/bin"
 
 # --- 小工具 ---
@@ -27,6 +28,34 @@ err() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 need_cmd() {
 	command -v "$1" >/dev/null 2>&1 || err "需要命令: $1"
+}
+
+# setup_short_alias 创建短别名符号链接；如果别名已被占用则提示用户使用全称。
+setup_short_alias() {
+	bin_dir="$1"
+	alias_path="${bin_dir}/${ALIAS_NAME}"
+
+	# 检查别名是否已被其他命令占用
+	if command -v "${ALIAS_NAME}" >/dev/null 2>&1; then
+		existing="$(command -v "${ALIAS_NAME}")"
+		# 如果已经是我们的符号链接，则跳过
+		if [ -L "${alias_path}" ] && [ "$(readlink "${alias_path}")" = "${BIN_NAME}" ]; then
+			info "短别名已存在: ${ALIAS_NAME} -> ${BIN_NAME}"
+			return 0
+		fi
+		warn "命令 '${ALIAS_NAME}' 已被占用 (${existing})，无法创建短别名。"
+		info "请使用全称: ${BIN_NAME}"
+		return 0
+	fi
+
+	# 创建符号链接
+	if [ -L "${alias_path}" ]; then
+		# 已存在旧符号链接，先删除
+		rm -f "${alias_path}"
+	fi
+	ln -s "${BIN_NAME}" "${alias_path}"
+	info "短别名: ${ALIAS_NAME} -> ${BIN_NAME}"
+	info "可使用 '${ALIAS_NAME}' 或 '${BIN_NAME}' 命令"
 }
 
 # curl | bash 若网络中断，未下完的脚本往往语法不完整；用花括号包一层 main，避免执行半截逻辑。
@@ -53,6 +82,7 @@ main() {
 	install_binary "${tmpdir}/extract" "${bin_dir}/${BIN_NAME}"
 
 	info "已安装: ${bin_dir}/${BIN_NAME}"
+	setup_short_alias "${bin_dir}"
 	print_path_hint "${bin_dir}"
 }
 

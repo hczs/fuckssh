@@ -19,6 +19,7 @@ $___install = {
 
     $ErrorActionPreference = "Stop"
     $BinName = "fuckssh"
+    $AliasName = "fs"
 
     function Write-Info([string]$Message) { Write-Host "==> $Message" }
     function Write-Warn([string]$Message) { Write-Warning $Message }
@@ -41,6 +42,31 @@ $___install = {
         $release = Invoke-RestMethod -Uri $uri -Headers @{ "User-Agent" = "fuckssh-installer" }
         if (-not $release.tag_name) { throw "无法获取最新版本，请使用 -Version 指定标签" }
         return $release.tag_name
+    }
+
+    function Setup-ShortAlias {
+        param([string]$BinDir)
+
+        $aliasPath = Join-Path $BinDir "$AliasName.cmd"
+
+        # 检查别名是否已被其他命令占用
+        $existing = Get-Command $AliasName -ErrorAction SilentlyContinue
+        if ($existing) {
+            # 如果已经是我们的包装脚本，则跳过
+            if ($existing.Source -eq $aliasPath) {
+                Write-Info "短别名已存在: $AliasName -> $BinName"
+                return
+            }
+            Write-Warn "命令 '$AliasName' 已被占用 ($($existing.Source))，无法创建短别名。"
+            Write-Info "请使用全称: $BinName"
+            return
+        }
+
+        # 创建 .cmd 包装脚本
+        $cmdContent = "@echo off`r`n$BinName.exe %*"
+        Set-Content -Path $aliasPath -Value $cmdContent -Encoding ASCII
+        Write-Info "短别名: $AliasName -> $BinName"
+        Write-Info "可使用 '$AliasName' 或 '$BinName' 命令"
     }
 
     function Install-Fuckssh {
@@ -76,6 +102,8 @@ $___install = {
         finally {
             Remove-Item -Recurse -Force -Path $tmp -ErrorAction SilentlyContinue
         }
+
+        Setup-ShortAlias -BinDir $BinDir
 
         $pathParts = $env:Path -split ';' | Where-Object { $_ -ne "" }
         if ($pathParts -contains $BinDir) {
