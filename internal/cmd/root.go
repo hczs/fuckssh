@@ -68,9 +68,11 @@ func executeWithArgs(args []string) error {
 	if err != nil {
 		printCommandError(rootCmd, args, err)
 	}
-	if !helpInArgs(runArgs) {
+	// 交互模式下 add 命令自行管理耗时输出，此处跳过
+	if !helpInArgs(runArgs) && !skipElapsedOutput {
 		printCmdElapsed(rootCmd.ErrOrStderr(), time.Since(start))
 	}
+	skipElapsedOutput = false
 	resetHelpFlags(rootCmd)
 	return err
 }

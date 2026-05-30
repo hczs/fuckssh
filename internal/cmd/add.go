@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fuckssh/fuckssh/internal/i18n"
 	"github.com/fuckssh/fuckssh/internal/sshclient"
@@ -31,6 +32,9 @@ var checkSSHFn = sshclient.CheckSSH
 
 // runWizardFn 可在测试中注入，默认调用交互式向导（传入 config 路径）。
 var runWizardFn = wizard.Run
+
+// skipElapsedOutput 为 true 时，executeWithArgs 跳过默认耗时输出（由子命令自行处理）。
+var skipElapsedOutput bool
 
 var addCmd = &cobra.Command{
 	Use:   "add",
@@ -70,18 +74,27 @@ func runAdd(stdout, stderr io.Writer) error {
 		return &os.PathError{Op: "mkdir", Path: dir, Err: err}
 	}
 
-	// 非交互模式：直接用 flag 构造输入，跳过 TUI
+	// 非交互模式：直接用 flag 构造输入，跳过 TUI，耗时从这里开始
 	if isNonInteractive() {
-		return runAddNonInteractive(stdout, stderr, configPath)
+		start := time.Now()
+		err := runAddNonInteractive(stdout, stderr, configPath)
+		printCmdElapsed(stderr, time.Since(start))
+		return err
 	}
 
+	// 交互模式：耗时从用户确认执行后开始计算，不包含填表时间
+	skipElapsedOutput = true
 	result, err := runWizardFn(configPath)
 	if err != nil {
 		return err
 	}
 
+	// 用户已确认，开始计时
+	start := time.Now()
+
 	if result.PasswordFlowComplete {
 		printAddSuccess(stdout, stderr, configPath, result)
+		printCmdElapsed(stderr, time.Since(start))
 		return nil
 	}
 
@@ -90,6 +103,7 @@ func runAdd(stdout, stderr io.Writer) error {
 	}
 
 	printAddSuccess(stdout, stderr, configPath, result)
+	printCmdElapsed(stderr, time.Since(start))
 	return nil
 }
 
