@@ -149,4 +149,13 @@ var messagesEN = map[string]string{
 	KeySearchFlagUser: "filter by username (case-insensitive)",
 	KeySearchFlagHost: "filter by hostname substring (case-insensitive)",
 	KeySearchFlagPort: "filter by port number (exact match)",
+
+	KeyDeleteShort:      "Delete a Host entry by alias",
+	KeyDeleteLong:       "Remove a Host entry from ssh config by its alias. A backup is created before deletion.",
+	KeyDeleteNotFound:   "No Host entry matches alias %q.\n",
+	KeyDeleteConfirm:    "Delete Host %q (%s@%s)? [y/N] ",
+	KeyDeleteCancelled:  "Cancelled.\n",
+	KeyDeleteSuccess:    "Host %q deleted (backup: %s)\n",
+	KeyDeleteKeyRemoved: "  · Removed managed key: %s\n",
+	KeyDeleteForceHint:  "Use --force to skip confirmation, or run in a terminal.\n",
 }

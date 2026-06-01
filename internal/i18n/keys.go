@@ -10,6 +10,8 @@ const (
 	KeyListLong     = "cmd.list.long"
 	KeySearchShort  = "cmd.search.short"
 	KeySearchLong   = "cmd.search.long"
+	KeyDeleteShort  = "cmd.delete.short"
+	KeyDeleteLong   = "cmd.delete.long"
 	KeyVersionShort = "cmd.version.short"
 	KeyVersionLong  = "cmd.version.long"
 	KeyConfigFlag   = "cmd.config_flag"
@@ -25,7 +27,7 @@ const (
 	KeyLangEn          = "lang.en"
 )
 
-// list/search/表格相关文案键。
+// list/search/delete/表格相关文案键。
 const (
 	KeyConfigIncludeSkipped = "config.include_skipped"
 
@@ -47,6 +49,13 @@ const (
 	KeySearchFlagUser = "search.flag_user"
 	KeySearchFlagHost = "search.flag_host"
 	KeySearchFlagPort = "search.flag_port"
+
+	KeyDeleteNotFound   = "delete.not_found"
+	KeyDeleteConfirm    = "delete.confirm"
+	KeyDeleteCancelled  = "delete.cancelled"
+	KeyDeleteSuccess    = "delete.success"
+	KeyDeleteKeyRemoved = "delete.key_removed"
+	KeyDeleteForceHint  = "delete.force_hint"
 )
 
 // 成功摘要相关文案键。

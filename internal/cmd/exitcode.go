@@ -20,7 +20,7 @@ func ExitCode(err error) int {
 	if errors.Is(err, sshclient.ErrDeployFailed) {
 		return 4
 	}
-	if errors.Is(err, wizard.ErrInvalidInput) || errors.Is(err, config.ErrHostExists) {
+	if errors.Is(err, wizard.ErrInvalidInput) || errors.Is(err, config.ErrHostExists) || errors.Is(err, config.ErrHostNotFound) {
 		return 1
 	}
 	var pe *config.ParseError

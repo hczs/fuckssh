@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
@@ -60,4 +61,9 @@ func defaultAliasSuffix() string {
 	}
 	sum := sha256.Sum256([]byte(host))
 	return hex.EncodeToString(sum[:4])
+}
+
+// IsManagedKeyPath 判断给定路径是否为 fuckssh 管理的密钥（文件名以 id_ed25519_fuckssh_ 开头）。
+func IsManagedKeyPath(path string) bool {
+	return strings.HasPrefix(filepath.Base(path), keyNamePrefix)
 }
