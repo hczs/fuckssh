@@ -1,5 +1,10 @@
 package config
 
+import "fmt"
+
+// ErrHostNotFound 表示 config 中未找到指定别名的 Host 条目。
+var ErrHostNotFound = fmt.Errorf("config: host alias not found")
+
 // HostEntry 表示 ssh config 中一个 Host 块的结构化字段（MVP 受限解析）。
 type HostEntry struct {
 	// Alias 为 Host 行上的第一个别名，供表格主键展示。

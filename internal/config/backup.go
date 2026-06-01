@@ -42,7 +42,7 @@ func backupUnlocked(path string) (bakPath string, err error) {
 	}
 
 	base := filepath.Base(path)
-	ts := time.Now().UTC().Format("20060102T150405Z")
+	ts := time.Now().UTC().Format("20060102T150405.000000000Z")
 	bakPath = filepath.Join(backupDir, base+".fuckssh.bak."+ts)
 
 	dst, err := os.OpenFile(bakPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)

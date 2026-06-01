@@ -108,6 +108,7 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(searchCmd)
+	rootCmd.AddCommand(deleteCmd)
 }
 
 func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
@@ -135,7 +136,7 @@ func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
 // add 命令带 --host 时为非交互模式，同样跳过。
 func isReadonlyCmd(cmd *cobra.Command) bool {
 	switch cmd.Name() {
-	case "list", "search", "version":
+	case "list", "search", "delete", "version":
 		return true
 	case "add":
 		return isNonInteractive()

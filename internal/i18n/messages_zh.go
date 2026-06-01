@@ -149,4 +149,13 @@ var messagesZH = map[string]string{
 	KeySearchFlagUser: "按用户名过滤（大小写不敏感）",
 	KeySearchFlagHost: "按地址子串过滤（大小写不敏感）",
 	KeySearchFlagPort: "按端口号精确过滤",
+
+	KeyDeleteShort:      "通过别名删除 Host 条目",
+	KeyDeleteLong:       "根据别名从 ssh config 中删除 Host 条目。删除前自动备份。",
+	KeyDeleteNotFound:   "未找到匹配别名 %q 的 Host 条目。\n",
+	KeyDeleteConfirm:    "删除 Host %q (%s@%s)？[y/N] ",
+	KeyDeleteCancelled:  "已取消。\n",
+	KeyDeleteSuccess:    "已删除 Host %q（备份: %s）\n",
+	KeyDeleteKeyRemoved: "  · 已删除关联密钥: %s\n",
+	KeyDeleteForceHint:  "使用 --force 跳过确认，或在终端中运行。\n",
 }
