@@ -17,7 +17,7 @@
 - **编辑与删除** — `fuckssh edit <alias>` 交互式修改已有 Host 条目；`fuckssh delete <alias>` 确认后删除条目及关联密钥
 - **只认标准文件** — 不引入私有配置格式；改的是 `~/.ssh/config` 与 `~/.ssh` 下的密钥，未安装本工具时仍可用 `ssh`
 - **列表与搜索** — `list` 展示别名、HostName、端口、用户与备注；`search` 支持多关键词 OR 搜索、`--user`/`--host`/`--port` 字段过滤与结果高亮
-- **短别名** — 所有命令支持短别名：`ls` / `s` / `v` / `a` / `e` / `d`，打字更快
+- **短别名** — 安装脚本自动创建 `fs` 全局别名；子命令也支持短别名：`ls` / `s` / `v` / `a` / `e` / `d`，打字更快
 - **安全习惯** — 修改 config 前自动备份；密码仅用于首次连接，不落盘明文
 - **跨平台** — Windows、macOS、Linux；中英文界面（首次运行可选语言）
 - **终端友好** — 基于 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 的 TUI 向导与表格输出
@@ -40,7 +40,15 @@ curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install
 irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
 ```
 
-脚本会检测 PATH；若 `~/.local/bin`（或 Windows 下 `%USERPROFILE%\.local\bin`）未在 PATH 中，会提示如何添加。实现见 [`scripts/install.sh`](scripts/install.sh)、[`scripts/install.ps1`](scripts/install.ps1)。
+脚本会检测 PATH；若 `~/.local/bin`（或 Windows 下 `%USERPROFILE%\.local\bin`）未在 PATH 中，会提示如何添加。安装完成后会自动创建 `fs` 短别名，可以直接用 `fs` 代替 `fuckssh`：
+
+```bash
+fs ls        # 等同于 fuckssh list
+fs a         # 等同于 fuckssh add
+fs s prod    # 等同于 fuckssh search prod
+```
+
+实现见 [`scripts/install.sh`](scripts/install.sh)、[`scripts/install.ps1`](scripts/install.ps1)。
 
 **本地调试：** Windows 默认没有 `sh`，请用 PowerShell 运行 `.\scripts\install.ps1 -BinDir .\bin`；`install.sh` 需在 [Git Bash](https://git-scm.com/) 或 WSL 中执行。
 
