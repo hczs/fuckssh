@@ -38,10 +38,15 @@ $___install = {
 
     function Get-ReleaseTag {
         if ($Version) { return $Version }
-        $uri = "https://api.github.com/repos/$Owner/$Repo/releases/latest"
-        $release = Invoke-RestMethod -Uri $uri -Headers @{ "User-Agent" = "fuckssh-installer" }
-        if (-not $release.tag_name) { throw "无法获取最新版本，请使用 -Version 指定标签" }
-        return $release.tag_name
+
+        # GitHub /releases/latest 会 302 重定向到 /tag/vX.Y.Z
+        # 跟随重定向完成后，从最终 URL 提取版本号
+        # 这是普通网页请求，不受 API 速率限制
+        $resp = Invoke-WebRequest -Uri "https://github.com/$Owner/$Repo/releases/latest" -UseBasicParsing
+        $finalUrl = $resp.BaseResponse.ResponseUri.AbsoluteUri
+        if ($finalUrl -match '/tag/(.+)$') { return $Matches[1] }
+
+        throw "无法获取最新版本，请使用 -Version 指定标签，例如：-Version v0.1.0"
     }
 
     function Setup-ShortAlias {
