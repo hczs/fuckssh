@@ -23,13 +23,21 @@ var confirmDeleteFn = confirmDelete
 
 var deleteCmd = &cobra.Command{
 	Use:          "delete <alias>",
+	Aliases:      []string{"d"},
 	Short:        "Delete a Host entry by alias",
 	Long:         "Remove a Host entry from ssh config by its alias. A backup is created before deletion.",
-	Args:         cobra.ExactArgs(1),
+	Args:         deleteArgs,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runDelete(args[0], cmd.OutOrStdout(), cmd.ErrOrStderr())
 	},
+}
+
+func deleteArgs(cmd *cobra.Command, args []string) error {
+	if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+		return fmt.Errorf("请指定要删除的 Host 别名，例如: fuckssh delete myserver")
+	}
+	return nil
 }
 
 func runDelete(alias string, stdout, stderr io.Writer) error {
