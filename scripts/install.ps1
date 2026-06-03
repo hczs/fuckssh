@@ -39,12 +39,12 @@ $___install = {
     function Get-ReleaseTag {
         if ($Version) { return $Version }
 
-        # GitHub /releases/latest 会 302 重定向到 /tag/vX.Y.Z
-        # 跟随重定向完成后，从最终 URL 提取版本号
-        # 这是普通网页请求，不受 API 速率限制
-        $resp = Invoke-WebRequest -Uri "https://github.com/$Owner/$Repo/releases/latest" -UseBasicParsing
-        $finalUrl = $resp.BaseResponse.ResponseUri.AbsoluteUri
-        if ($finalUrl -match '/tag/(.+)$') { return $Matches[1] }
+        # 用 GitHub 网页 URL + Accept: application/json 获取版本号
+        # 走网页服务器限流，比 api.github.com 的 API 限流宽松得多
+        # 参考：chezmoi 安装脚本的实现
+        $releaseUrl = "https://github.com/$Owner/$Repo/releases/latest"
+        $release = Invoke-RestMethod -Uri $releaseUrl -Headers @{ 'Accept' = 'application/json' }
+        if ($release.tag_name) { return $release.tag_name }
 
         throw "无法获取最新版本，请使用 -Version 指定标签，例如：-Version v0.1.0"
     }
