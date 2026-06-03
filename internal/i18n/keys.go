@@ -56,6 +56,11 @@ const (
 	KeyDeleteSuccess    = "delete.success"
 	KeyDeleteKeyRemoved = "delete.key_removed"
 	KeyDeleteForceHint  = "delete.force_hint"
+
+	KeyEditShort          = "cmd.edit.short"
+	KeyEditLong           = "cmd.edit.long"
+	KeyEditConfirmSummary = "edit.confirm_summary"
+	KeyEditSuccess        = "edit.success"
 )
 
 // 成功摘要相关文案键。

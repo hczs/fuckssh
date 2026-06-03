@@ -109,6 +109,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(editCmd)
 }
 
 func rootPersistentPreRun(cmd *cobra.Command, args []string) error {
