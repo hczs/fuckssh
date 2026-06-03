@@ -158,4 +158,13 @@ var messagesZH = map[string]string{
 	KeyDeleteSuccess:    "已删除 Host %q（备份: %s）\n",
 	KeyDeleteKeyRemoved: "  · 已删除关联密钥: %s\n",
 	KeyDeleteForceHint:  "使用 --force 跳过确认，或在终端中运行。\n",
+
+	KeyEditShort: "通过交互式向导编辑已有的 Host 条目",
+	KeyEditLong:  "打开预填表单的 TUI 向导，修改已有的 Host 条目。支持修改别名、地址、用户名、端口、私钥路径和备注。采用行级编辑，保留未知配置项。",
+	KeyEditConfirmSummary: "即将更新：\n" +
+		"  · 备份 SSH config\n" +
+		"  · Host 别名: %s\n" +
+		"  · 登录地址: %s@%s:%s\n" +
+		"  · 配置文件: %s",
+	KeyEditSuccess: "已更新 Host %q\n",
 }

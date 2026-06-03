@@ -158,4 +158,13 @@ var messagesEN = map[string]string{
 	KeyDeleteSuccess:    "Host %q deleted (backup: %s)\n",
 	KeyDeleteKeyRemoved: "  · Removed managed key: %s\n",
 	KeyDeleteForceHint:  "Use --force to skip confirmation, or run in a terminal.\n",
+
+	KeyEditShort: "Edit an existing Host entry via interactive wizard",
+	KeyEditLong:  "Open a pre-filled TUI wizard to modify an existing Host entry. Supports editing alias, hostname, user, port, identity file, and remark. Uses line-level editing to preserve unknown directives.",
+	KeyEditConfirmSummary: "About to update:\n" +
+		"  · Backup SSH config\n" +
+		"  · Host alias: %s\n" +
+		"  · Login: %s@%s:%s\n" +
+		"  · Config: %s",
+	KeyEditSuccess: "Host %q updated\n",
 }
