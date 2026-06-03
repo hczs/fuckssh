@@ -12,10 +12,11 @@ import (
 )
 
 var editCmd = &cobra.Command{
-	Use:   "edit <alias>",
-	Short: i18n.T(i18n.KeyEditShort),
-	Long:  i18n.T(i18n.KeyEditLong),
-	Args:  editArgs,
+	Use:     "edit <alias>",
+	Aliases: []string{"e"},
+	Short:   i18n.T(i18n.KeyEditShort),
+	Long:    i18n.T(i18n.KeyEditLong),
+	Args:    editArgs,
 	// 向导内 Ctrl+C 由 executeWithArgs 输出单行取消提示，不附带 usage。
 	SilenceUsage:  true,
 	SilenceErrors: true,

@@ -8,8 +8,9 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:  "list",
-	Args: cobra.NoArgs,
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Args:    cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runListCmd(cmd.OutOrStdout(), cmd.ErrOrStderr())
 	},

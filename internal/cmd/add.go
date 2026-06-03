@@ -37,8 +37,9 @@ var runWizardFn = wizard.Run
 var skipElapsedOutput bool
 
 var addCmd = &cobra.Command{
-	Use:   "add",
-	Short: "Add a VPS host via interactive wizard",
+	Use:     "add",
+	Aliases: []string{"a"},
+	Short:   "Add a VPS host via interactive wizard",
 	Long: "Run the interactive wizard to generate keys, update ssh config, and optionally deploy a public key.\n\n" +
 		"Non-interactive mode (when --host is provided):\n" +
 		"  fuckssh add --host 1.2.3.4 --user root --password pass --alias myserver\n" +
