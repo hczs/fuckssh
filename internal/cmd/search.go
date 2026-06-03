@@ -11,10 +11,11 @@ import (
 )
 
 var searchCmd = &cobra.Command{
-	Use:   "search [query ...]",
-	Short: "Search hosts by alias, hostname, or IP",
-	Long:  "Match hosts by alias, HostName, or IP substring. Multiple keywords are OR-ed.",
-	Args:  searchArgs,
+	Use:     "search [query ...]",
+	Aliases: []string{"s"},
+	Short:   "Search hosts by alias, hostname, or IP",
+	Long:    "Match hosts by alias, HostName, or IP substring. Multiple keywords are OR-ed.",
+	Args:    searchArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runSearchCmd(args, cmd.OutOrStdout(), cmd.ErrOrStderr())
 	},
