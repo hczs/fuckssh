@@ -164,8 +164,11 @@ resolve_tag() {
 		return 0
 	fi
 	need_cmd curl
+	# 用 GitHub 网页 URL + Accept: application/json 获取版本号
+	# 走网页服务器限流，比 api.github.com 的 API 限流宽松得多
 	tag="$(
-		curl -fsSL "https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest" |
+		curl -fsSL -H 'Accept: application/json' \
+			"https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest" |
 			grep '"tag_name"' |
 			head -n 1 |
 			sed 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'
