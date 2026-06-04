@@ -1,273 +1,250 @@
 # fuckssh
 
+<p align="center">
+  <strong>English</strong> | <a href="README_zh.md">中文</a>
+</p>
+
 [![CI](https://github.com/hczs/fuckssh/actions/workflows/ci.yml/badge.svg)](https://github.com/hczs/fuckssh/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hczs/fuckssh)](https://goreportcard.com/report/github.com/hczs/fuckssh)
 [![Release](https://img.shields.io/github/v/release/hczs/fuckssh?label=release)](https://github.com/hczs/fuckssh/releases)
 
-**跨平台 CLI：用交互式向导管理 VPS，只读写标准 `~/.ssh/config`。**
+**Cross-platform CLI for VPS SSH management. Interactive wizard: from IP + password to passwordless `ssh my-vps` in under 3 minutes — no tutorial needed.**
 
-新机器从「有 IP 和密码」到 `ssh my-vps` 免密登录，不必再翻教程拼 `ssh-keygen`、公钥上传和 config 字段。列表与搜索直接解析本机 OpenSSH 配置，与系统 `ssh`、VS Code Remote SSH、Tabby 等工具完全互通。
+fuckssh reads and writes your standard `~/.ssh/config`. No proprietary formats, no lock-in. Works with `ssh`, VS Code Remote SSH, Tabby, and any OpenSSH-compatible tool out of the box.
 
 ---
 
-## 特性
+## Features
 
-- **一站式添加** — `fuckssh add` 引导完成密钥生成、公钥部署（密码模式）与 `ssh config` 写入；支持「已有私钥、仅补 config」模式
-- **非交互模式** — `fuckssh add -H <ip> -P <pass>` 一行命令完成配置，适合脚本与自动化场景；先测连通性再动文件，失败零副作用
-- **编辑与删除** — `fuckssh edit <alias>` 交互式修改已有 Host 条目；`fuckssh delete <alias>` 确认后删除条目及关联密钥
-- **只认标准文件** — 不引入私有配置格式；改的是 `~/.ssh/config` 与 `~/.ssh` 下的密钥，未安装本工具时仍可用 `ssh`
-- **列表与搜索** — `list` 展示别名、HostName、端口、用户与备注；`search` 支持多关键词 OR 搜索、`--user`/`--host`/`--port` 字段过滤与结果高亮
-- **短别名** — 安装脚本自动创建 `fs` 全局别名；子命令也支持短别名：`ls` / `s` / `v` / `a` / `e` / `d`，打字更快
-- **安全习惯** — 修改 config 前自动备份；密码仅用于首次连接，不落盘明文
-- **跨平台** — Windows、macOS、Linux；中英文界面（首次运行可选语言）
-- **终端友好** — 基于 [Bubble Tea](https://github.com/charmbracelet/bubbletea) 的 TUI 向导与表格输出
+- **One-stop setup** — `fuckssh add` walks you through key generation, public key deployment (password mode), and `ssh config` writing. Also supports "I already have a key, just write the config" mode
+- **Non-interactive mode** — `fuckssh add -H <ip> -P <pass>` in one line, perfect for scripts and automation. Tests connectivity first; failure means zero side effects
+- **Edit & delete** — `fuckssh edit <alias>` to interactively modify a Host entry; `fuckssh delete <alias>` to remove it along with managed keys
+- **Standard files only** — no proprietary config format. You edit `~/.ssh/config` and keys under `~/.ssh`; uninstall fuckssh and everything still works
+- **List & search** — `list` shows alias, HostName, port, user, and remark in a table; `search` supports multi-keyword OR, `--user`/`--host`/`--port` field filters, and result highlighting
+- **Short aliases** — the install script creates a global `fs` alias; subcommands have short forms too: `ls` / `s` / `v` / `a` / `e` / `d`
+- **Safe by default** — auto-backup before modifying config; passwords are used only for the initial connection and never persisted in plaintext
+- **Cross-platform** — Windows, macOS, Linux; English and Chinese UI (language selectable on first run)
+- **Terminal-native** — [Bubble Tea](https://github.com/charmbracelet/bubbletea) TUI wizard and table output
 
-## 安装
+## Installation
 
-### 一键安装（推荐）
+### One-liner (recommended)
 
-**macOS / Linux**（需要 `curl`，将二进制安装到 `~/.local/bin`）：
+**macOS / Linux** (requires `curl`, installs to `~/.local/bin`):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 ```
 
-指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.1.0`
+Pin a version: `curl -fsSL .../install.sh | sh -s -- --version v0.1.0`
 
-**Windows**（PowerShell）：
+**Windows** (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
 ```
 
-脚本会检测 PATH；若 `~/.local/bin`（或 Windows 下 `%USERPROFILE%\.local\bin`）未在 PATH 中，会提示如何添加。安装完成后会自动创建 `fs` 短别名，可以直接用 `fs` 代替 `fuckssh`：
+The script checks your PATH and guides you if `~/.local/bin` (or `%USERPROFILE%\.local\bin` on Windows) isn't included. After installation, a `fs` alias is ready:
 
 ```bash
-fs ls        # 等同于 fuckssh list
-fs a         # 等同于 fuckssh add
-fs s prod    # 等同于 fuckssh search prod
+fs ls        # same as fuckssh list
+fs a         # same as fuckssh add
+fs s prod    # same as fuckssh search prod
 ```
 
-实现见 [`scripts/install.sh`](scripts/install.sh)、[`scripts/install.ps1`](scripts/install.ps1)。
+### Pre-built binaries
 
-**本地调试：** Windows 默认没有 `sh`，请用 PowerShell 运行 `.\scripts\install.ps1 -BinDir .\bin`；`install.sh` 需在 [Git Bash](https://git-scm.com/) 或 WSL 中执行。
+Download from [GitHub Releases](https://github.com/hczs/fuckssh/releases) and put `fuckssh` in your `PATH`.
 
-### 预编译二进制（手动）
-
-在 [GitHub Releases](https://github.com/hczs/fuckssh/releases) 下载对应平台的压缩包，解压后将 `fuckssh` 放入 `PATH`。
-
-| 平台 | 常见产物示例 |
-|------|----------------|
-| Linux x86_64 / arm64 | `fuckssh_linux_x86_64.tar.gz`、`fuckssh_linux_arm64.tar.gz` |
+| Platform | Example artifact |
+|----------|-----------------|
+| Linux x86_64 / arm64 | `fuckssh_linux_x86_64.tar.gz`, `fuckssh_linux_arm64.tar.gz` |
 | macOS Intel | `fuckssh_macos_x86_64.tar.gz` |
 | macOS Apple Silicon | `fuckssh_macos_arm64.tar.gz` |
-| macOS 通用二进制 | `fuckssh_macos_all.tar.gz`（Intel + Apple Silicon） |
+| macOS Universal | `fuckssh_macos_all.tar.gz` (Intel + Apple Silicon) |
 | Windows | `fuckssh_windows_x86_64.zip` |
 
-### Go 安装
+### Go install
 
-需要 Go 1.26+（与仓库 `go.mod` 一致）：
+Requires Go 1.22+:
 
 ```bash
 go install github.com/fuckssh/fuckssh@latest
 ```
 
-指定版本：`go install github.com/fuckssh/fuckssh@v0.1.0`
-
-### 从源码构建
+### Build from source
 
 ```bash
 git clone https://github.com/hczs/fuckssh.git
 cd fuckssh
-go build -o bin/fuckssh ./cmd/fuckssh
+make build
 ```
 
-或使用 Makefile：`make build`
+## Quick Start
 
-## 快速开始
-
-**前提：** 本机已安装 OpenSSH 客户端（`ssh` 在 PATH 中）。`add` 子命令会检测并给出安装指引。
+**Prerequisite:** OpenSSH client must be installed (`ssh` in PATH). The `add` command detects this and provides install guidance.
 
 ```bash
-# 添加一台新 VPS（交互式向导）
-fuckssh add              # 或 fuckssh a
+# Add a new VPS (interactive wizard)
+fuckssh add              # or: fuckssh a
 
-# 非交互模式：一行命令搞定
+# Non-interactive: one-liner setup
 fuckssh add -H 1.2.3.4 -u root -P mypass -a myserver
 
-# 列出 ~/.ssh/config 中的 Host
-fuckssh list             # 或 fuckssh ls
+# List all Hosts in ~/.ssh/config
+fuckssh list             # or: fuckssh ls
 
-# 搜索（多关键词 OR、字段过滤、高亮）
-fuckssh search prod      # 或 fuckssh s prod
+# Search (multi-keyword OR, field filters, highlighting)
+fuckssh search prod      # or: fuckssh s prod
 fuckssh search --user root --port 2222 web
 
-# 编辑已有 Host（交互式向导，预填现有值）
-fuckssh edit myserver    # 或 fuckssh e myserver
+# Edit an existing Host (interactive, pre-filled with current values)
+fuckssh edit myserver    # or: fuckssh e myserver
 
-# 删除 Host（确认后删除条目及关联密钥）
-fuckssh delete myserver  # 或 fuckssh d myserver
+# Delete a Host (with confirmation, removes managed keys too)
+fuckssh delete myserver  # or: fuckssh d myserver
 
-# 查看版本
-fuckssh version          # 或 fuckssh v
+# Show version
+fuckssh version          # or: fuckssh v
 
-# 使用非默认 config 路径
+# Use a non-default config path
 fuckssh --config /path/to/config ls
 ```
 
-添加完成后，按向导提示即可直接执行：
+After adding, just run:
 
 ```bash
-ssh <你设置的别名>
+ssh <your-alias>
 ```
 
-## 命令参考
+## Command Reference
 
-| 命令 | 短别名 | 说明 |
-|------|--------|------|
-| `fuckssh add` | `a` | 交互式向导：密码模式（生成密钥 + 部署公钥 + 写 config）或密钥模式（仅写 config） |
-| `fuckssh add -H <ip> -P <pass>` | — | 非交互模式：一行命令完成配置（`-H` 触发；`-u` 用户、`-p` 端口、`-a` 别名、`-i` 私钥、`-r` 备注） |
-| `fuckssh list` | `ls` | 解析并表格展示所有 Host；多别名以逗号分隔 |
-| `fuckssh search <query>` | `s` | 多关键词 OR 搜索；`--user`/`--host`/`--port` 字段过滤；TTY 下结果高亮 |
-| `fuckssh edit <alias>` | `e` | 交互式编辑已有 Host 条目（预填现有值，支持"返回修改"重试） |
-| `fuckssh delete <alias>` | `d` | 确认后删除 Host 条目；若 IdentityFile 为 fuckssh 管理的密钥则一并删除 |
-| `fuckssh version` | `v` | 显示版本、提交与构建时间（Release 构建通过 ldflags 注入） |
+| Command | Short | Description |
+|---------|-------|-------------|
+| `fuckssh add` | `a` | Interactive wizard: password mode (generate key + deploy pubkey + write config) or key mode (write config only) |
+| `fuckssh add -H <ip> -P <pass>` | — | Non-interactive: one-line setup (`-H` triggers; `-u` user, `-p` port, `-a` alias, `-i` identity file, `-r` remark) |
+| `fuckssh list` | `ls` | Parse and display all Hosts in a table; multiple aliases shown comma-separated |
+| `fuckssh search <query>` | `s` | Multi-keyword OR search; `--user`/`--host`/`--port` filters; highlighted results in TTY |
+| `fuckssh edit <alias>` | `e` | Interactive edit of an existing Host (pre-filled, supports "go back and revise" retry) |
+| `fuckssh delete <alias>` | `d` | Delete Host with confirmation; removes managed IdentityFile keys too |
+| `fuckssh version` | `v` | Show version, commit, and build date (injected via ldflags in release builds) |
 
-**全局选项**
+**Global options**
 
-| 选项 | 说明 |
-|------|------|
-| `--config <path>` | 指定 ssh config 文件（默认 `~/.ssh/config`） |
-| `-h`, `--help` | 帮助（支持中英文） |
+| Option | Description |
+|--------|-------------|
+| `--config <path>` | Path to ssh config file (default `~/.ssh/config`) |
+| `-h`, `--help` | Help (English and Chinese supported) |
 
-**命令选项**
+**Command options**
 
-| 选项 | 适用命令 | 说明 |
-|------|----------|------|
-| `-H`, `--host` | add | 目标主机地址（触发非交互模式） |
-| `-u`, `--user` | add | 登录用户（默认 root） |
-| `-p`, `--port` | add | SSH 端口（默认 22） |
-| `-P`, `--password` | add | SSH 密码（触发密码模式） |
-| `-i`, `--identity-file` | add | 私钥路径（触发密钥模式） |
-| `-a`, `--alias` | add | Host 别名（不填则自动从地址生成） |
-| `-r`, `--remark` | add | 备注信息 |
-| `--user` | search | 按用户名过滤 |
-| `--host` | search | 按主机地址过滤 |
-| `--port` | search | 按端口过滤 |
-| `-f`, `--force` | delete | 跳过确认提示 |
+| Option | Commands | Description |
+|--------|----------|-------------|
+| `-H`, `--host` | add | Target host address (triggers non-interactive mode) |
+| `-u`, `--user` | add | Login user (default: root) |
+| `-p`, `--port` | add | SSH port (default: 22) |
+| `-P`, `--password` | add | SSH password (triggers password mode) |
+| `-i`, `--identity-file` | add | Private key path (triggers key mode) |
+| `-a`, `--alias` | add | Host alias (auto-generated from address if omitted) |
+| `-r`, `--remark` | add | Remark / note |
+| `--user` | search | Filter by username |
+| `--host` | search | Filter by host address |
+| `--port` | search | Filter by port |
+| `-f`, `--force` | delete | Skip confirmation prompt |
 
-## Demo 演示
+## Demo
 
-### add — 交互式添加 VPS
+### add — Interactive VPS setup
 
 ```bash
 $ fuckssh add
 
-  请输入 VPS 信息：
-  > 地址: 1.2.3.4
-    端口: 22
-    用户: root
-    别名: myserver
+  Enter VPS details:
+  > Address: 1.2.3.4
+    Port: 22
+    User: root
+    Alias: myserver
 
-  ✓ 已生成密钥对
-  ✓ 已部署公钥到 1.2.3.4
-  ✓ 已写入 ~/.ssh/config
+  ✓ Key pair generated
+  ✓ Public key deployed to 1.2.3.4
+  ✓ Written to ~/.ssh/config
 
   ssh myserver
 ```
 
-### add — 非交互模式
+### add — Non-interactive mode
 
 ```bash
 $ fuckssh add -H 1.2.3.4 -u root -P mypass -a myserver
 
-  ✓ 连接测试通过
-  ✓ 已生成密钥对
-  ✓ 已部署公钥到 1.2.3.4
-  ✓ 已写入 ~/.ssh/config
+  ✓ Connection test passed
+  ✓ Key pair generated
+  ✓ Public key deployed to 1.2.3.4
+  ✓ Written to ~/.ssh/config
 
   ssh myserver
-  执行耗时 3.2s
+  Completed in 3.2s
 ```
 
-### list — 列出所有 Host
+### list — Show all Hosts
 
 ```bash
 $ fuckssh ls
 
-读取: /home/user/.ssh/config
-共 3 台主机
+Reading: /home/user/.ssh/config
+3 hosts found
 
 ┌──────────────┬───────────────┬──────┬────────┬──────────────┐
-│ 别名         │ 地址          │ 端口 │ 用户   │ 备注         │
+│ Alias        │ Address       │ Port │ User   │ Remark       │
 ├──────────────┼───────────────┼──────┼────────┼──────────────┤
-│ myserver     │ 1.2.3.4       │   22 │ root   │ 生产环境     │
-│ dev          │ 10.0.0.1      │   22 │ ubuntu │ 开发机       │
-│ staging      │ 172.16.0.5    │ 2222 │ admin  │ 预发布       │
+│ myserver     │ 1.2.3.4       │   22 │ root   │ Production   │
+│ dev          │ 10.0.0.1      │   22 │ ubuntu │ Dev machine  │
+│ staging      │ 172.16.0.5    │ 2222 │ admin  │ Staging      │
 └──────────────┴───────────────┴──────┴────────┴──────────────┘
 ```
 
-### search — 搜索 Host
+### search — Find hosts
 
 ```bash
 $ fuckssh s prod
 
-搜索: prod，命中 1 台
+Search: prod — 1 match
 
 ┌──────────────┬───────────────┬──────┬────────┬──────────────┐
-│ 别名         │ 地址          │ 端口 │ 用户   │ 备注         │
+│ Alias        │ Address       │ Port │ User   │ Remark       │
 ├──────────────┼───────────────┼──────┼────────┼──────────────┤
-│ myserver     │ 1.2.3.4       │   22 │ root   │ 生产环境     │
+│ myserver     │ 1.2.3.4       │   22 │ root   │ Production   │
 └──────────────┴───────────────┴──────┴────────┴──────────────┘
 ```
 
-```bash
-$ fuckssh search --user root --port 2222
-
-搜索: (user=root, port=2222)，命中 1 台
-
-┌──────────────┬───────────────┬──────┬────────┬──────────────┐
-│ 别名         │ 地址          │ 端口 │ 用户   │ 备注         │
-├──────────────┼───────────────┼──────┼────────┼──────────────┤
-│ staging      │ 172.16.0.5    │ 2222 │ admin  │ 预发布       │
-└──────────────┴───────────────┴──────┴────────┴──────────────┘
-```
-
-### edit — 编辑已有 Host
+### edit — Modify an existing Host
 
 ```bash
 $ fuckssh e myserver
 
-  请修改 VPS 信息（回车保留原值）：
-  > 别名: myserver
-    地址: 1.2.3.4
-    端口: 2222          ← 修改端口
-    用户: root
+  Edit VPS details (Enter to keep current value):
+  > Alias: myserver
+    Address: 1.2.3.4
+    Port: 2222          ← changed
+    User: root
 
-  ✓ 已更新 ~/.ssh/config
+  ✓ ~/.ssh/config updated
 
   ssh myserver
 ```
 
-### delete — 删除 Host
+### delete — Remove a Host
 
 ```bash
 $ fuckssh d myserver
 
-  确认删除 myserver (root@1.2.3.4)？[y/N] y
+  Delete myserver (root@1.2.3.4)? [y/N] y
 
-  ✓ 已删除 myserver
-  ✓ 已删除关联密钥 /home/user/.ssh/id_ed25519_fuckssh_myserver
+  ✓ Deleted myserver
+  ✓ Removed managed key /home/user/.ssh/id_ed25519_fuckssh_myserver
 ```
 
-```bash
-# 跳过确认（脚本场景）
-$ fuckssh delete myserver --force
-
-  ✓ 已删除 myserver
-```
-
-### version — 查看版本
+### version
 
 ```bash
 $ fuckssh v
@@ -275,60 +252,58 @@ $ fuckssh v
 v0.2.0 (abc1234, 2026-06-03)
 ```
 
-## 设计原则
+## Design Principles
 
-1. **标准优先** — 配置来源与落盘均为 OpenSSH 约定路径与语法。
-2. **可恢复** — 写入前备份现有 config，降低误操作成本。
-3. **CLI 原生** — 面向习惯终端与 Remote SSH 的开发者，不替代 GUI 客户端，与之互补。
-4. **MVP 聚焦** — 当前不提供跨机加密同步；见下方路线图。
+1. **Standard-first** — Reads and writes OpenSSH conventions. Uninstall fuckssh and your config still works.
+2. **Recoverable** — Backs up config before every write. Low cost of mistakes.
+3. **CLI-native** — Built for developers who live in the terminal and VS Code Remote SSH. Complements GUI clients, doesn't replace them.
+4. **MVP-focused** — No encrypted cross-device sync yet. See roadmap below.
 
-## 路线图
+## Roadmap
 
-| 阶段 | 计划能力 |
-|------|----------|
-| **当前** | `add`（交互 + 非交互）/ `list` / `search`（多关键词 + 字段过滤 + 高亮）/ `edit` / `delete` / `version` / 短别名 |
-| **V2** | 加密备份与恢复、`ssh config` + 私钥跨设备同步、别名冲突合并 |
+| Phase | Planned capabilities |
+|-------|---------------------|
+| **Current** | `add` (interactive + non-interactive) / `list` / `search` (multi-keyword + field filters + highlighting) / `edit` / `delete` / `version` / short aliases |
+| **V2** | Encrypted backup & restore, `ssh config` + private key cross-device sync, alias conflict merging |
 
-产品细节见 [PRD](docs/fuckssh-PRD.md)。
+## Development
 
-## 开发
+**Prerequisites:**
 
-**环境**
-
-- Go 1.26+
-- [golangci-lint](https://golangci-lint.run/)（本地 lint 与 pre-commit 需要）
-- `goimports`：`go install golang.org/x/tools/cmd/goimports@latest`
+- Go 1.22+
+- [golangci-lint](https://golangci-lint.run/) (for local linting and pre-commit)
+- `goimports`: `go install golang.org/x/tools/cmd/goimports@latest`
 
 ```bash
-make build    # 构建到 bin/fuckssh
+make build    # compile to bin/fuckssh
 make test     # go test ./...
 make lint     # golangci-lint
 make fmt      # gofmt + goimports
 make run      # go run ./cmd/fuckssh
-make hooks    # 一次性启用 pre-commit（提交时自动 fmt + lint）
+make hooks    # enable pre-commit (auto fmt + lint on staged .go files)
 ```
 
-克隆仓库后建议执行一次 `make hooks`，之后每次 `git commit` 会对**已暂存**的 `.go` 文件运行 `gofmt`/`goimports` 并执行 `golangci-lint`。
+After cloning, run `make hooks` once. Every `git commit` will then auto-format and lint staged `.go` files.
 
-推送 `v*` 标签（如 `v0.1.0`）会触发 [Release 工作流](.github/workflows/release.yml)，由 GoReleaser 构建并发布到 GitHub Releases。本地试跑：`make release-dry`（需安装 [GoReleaser](https://goreleaser.com/)）。
+Push a `v*` tag (e.g. `v0.1.0`) to trigger the [Release workflow](.github/workflows/release.yml) — GoReleaser builds and publishes to GitHub Releases. Dry run locally: `make release-dry`.
 
-| 触发 | 工作流 | 说明 |
-|------|--------|------|
-| push / PR → `main` / `master` | [CI](.github/workflows/ci.yml) | 测试、lint、多平台编译检查 |
+| Trigger | Workflow | Description |
+|---------|----------|-------------|
+| push / PR → `main` / `master` | [CI](.github/workflows/ci.yml) | Test, lint, cross-platform build check |
 
-## 文档
+## Documentation
 
-| 文档 | 说明 |
-|------|------|
-| [PRD](docs/fuckssh-PRD.md) | 产品需求与场景 |
-| [技术选型](docs/fuckssh-技术选型.md) | 技术栈与模块划分 |
-| [系统架构](docs/fuckssh-架构设计.md) | 架构设计（[HTML 版](docs/fuckssh-架构设计.html)） |
-| [AGENTS.md](AGENTS.md) | 贡献者与 AI 协作约定 |
+| Doc | Description |
+|-----|-------------|
+| [PRD](docs/fuckssh-PRD.md) | Product requirements & scenarios |
+| [Tech Selection](docs/fuckssh-技术选型.md) | Tech stack & module breakdown |
+| [Architecture](docs/fuckssh-架构设计.md) | System architecture ([HTML](docs/fuckssh-架构设计.html)) |
+| [AGENTS.md](AGENTS.md) | Contributor & AI collaboration conventions |
 
-## 参与贡献
+## Contributing
 
-欢迎 Issue 与 Pull Request。提交前请确保 `make test` 通过；若已 `make hooks`，commit 时会自动 fmt/lint。较大改动请先开 Issue 讨论方向。
+Issues and pull requests are welcome. Please ensure `make test` passes before submitting. With `make hooks` enabled, commits are auto-formatted and linted. For larger changes, open an Issue first to discuss direction.
 
-## 许可证
+## License
 
-许可证尚未确定。在明确之前，请勿将本项目用于需要明确开源许可证的商业再分发场景；关注本仓库后续更新。
+License to be determined. Until then, please do not use this project for commercial redistribution that requires an explicit open-source license. Watch this repo for updates.
