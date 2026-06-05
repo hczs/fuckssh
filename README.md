@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/hczs/fuckssh/actions/workflows/ci.yml/badge.svg)](https://github.com/hczs/fuckssh/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hczs/fuckssh)](https://goreportcard.com/report/github.com/hczs/fuckssh)
-[![Release](https://img.shields.io/github/v/release/hczs/fuckssh?label=release)](https://github.com/hczs/fuckssh/releases)
+[![Release](https://img.shields.io/badge/release-v0.5.0-blue)](https://github.com/hczs/fuckssh/releases)
 
 **Cross-platform CLI for VPS SSH management. Interactive wizard: from IP + password to passwordless `ssh my-vps` in under 3 minutes — no tutorial needed.**
 
