@@ -138,10 +138,13 @@ func TestAdd_keyMode_integrationWithTempConfig(t *testing.T) {
 	})
 	defer restoreWizard()
 
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
+
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
-	if err := ExecuteWithArgs([]string{"add", "--config", cfg}); err != nil {
+	if err := ExecuteWithArgs([]string{"add"}); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 
@@ -203,10 +206,13 @@ func TestAdd_passwordMode_integrationSkipsSecondBackup(t *testing.T) {
 	})
 	defer restoreWizard()
 
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
+
 	var stdout, stderr bytes.Buffer
 	rootCmd.SetOut(&stdout)
 	rootCmd.SetErr(&stderr)
-	if err := ExecuteWithArgs([]string{"add", "--config", cfg}); err != nil {
+	if err := ExecuteWithArgs([]string{"add"}); err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
 

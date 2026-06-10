@@ -44,7 +44,7 @@ type passwordFlowDeps struct {
 }
 
 // RunPasswordMode 通过 huh 逐项收集密码模式字段并执行完整编排。
-// configPath 为 ssh config 路径（与 cmd --config 一致）。
+// configPath 为标准 ~/.ssh/config 路径。
 func RunPasswordMode(ctx context.Context, configPath string) (*WizardResult, string, error) {
 	if strings.TrimSpace(configPath) == "" {
 		return nil, "", fmt.Errorf("%w: config path must not be empty", ErrInvalidInput)

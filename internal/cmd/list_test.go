@@ -72,8 +72,8 @@ func Test_ListCmd_emptyHostsFriendlyMessage(t *testing.T) {
 }
 
 func Test_ListCmd_respectsConfigFlag(t *testing.T) {
-	configFileFlag = fixtureConfig("single.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = fixtureConfig("single.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	if err := runListCmd(&stdout, &stderr); err != nil {
@@ -114,9 +114,9 @@ func Test_ListCmd_missingConfig_returnsExitCode3(t *testing.T) {
 
 func Test_ListCmd_rejectsExtraArgs(t *testing.T) {
 	resetHelpFlags(rootCmd)
-	configFileFlag = fixtureConfig("single.conf")
+	testConfigPath = fixtureConfig("single.conf")
 	t.Cleanup(func() {
-		configFileFlag = ""
+		testConfigPath = ""
 		resetHelpFlags(rootCmd)
 	})
 

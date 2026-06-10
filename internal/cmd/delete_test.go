@@ -16,8 +16,8 @@ func Test_DeleteCmd_deletesEntry(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config")
 	writeTestConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n\nHost other\n    HostName 10.0.0.1\n    User admin\n")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	// 注入确认函数：总是返回 true。
 	origConfirm := confirmDeleteFn
@@ -48,8 +48,8 @@ func Test_DeleteCmd_aliasNotFound(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config")
 	writeTestConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	err := runDelete("nonexistent", &stdout, &stderr)
@@ -65,8 +65,8 @@ func Test_DeleteCmd_cancelledByUser(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config")
 	writeTestConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	// 注入确认函数：返回 false（用户取消）。
 	origConfirm := confirmDeleteFn
@@ -95,8 +95,8 @@ func Test_DeleteCmd_caseInsensitive(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config")
 	writeTestConfig(t, cfg, "Host MyServer\n    HostName 1.2.3.4\n    User root\n")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	origConfirm := confirmDeleteFn
 	confirmDeleteFn = func(_ io.Writer, _, _, _ string) (bool, error) { return true, nil }
@@ -118,9 +118,9 @@ func Test_DeleteCmd_caseInsensitive(t *testing.T) {
 }
 
 func Test_DeleteCmd_exitCode1_forNotFound(t *testing.T) {
-	configFileFlag = filepath.Join(t.TempDir(), "empty")
-	writeTestConfig(t, configFileFlag, "")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = filepath.Join(t.TempDir(), "empty")
+	writeTestConfig(t, testConfigPath, "")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	err := ExecuteWithArgs([]string{"delete", "ghost"})
 	if err == nil {
@@ -135,9 +135,9 @@ func Test_DeleteCmd_exitCode1_forNotFound(t *testing.T) {
 }
 
 func Test_DeleteCmd_rejectsNoArgs(t *testing.T) {
-	configFileFlag = filepath.Join(t.TempDir(), "empty")
-	writeTestConfig(t, configFileFlag, "")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = filepath.Join(t.TempDir(), "empty")
+	writeTestConfig(t, testConfigPath, "")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	err := ExecuteWithArgs([]string{"delete"})
 	if err == nil {
@@ -149,8 +149,8 @@ func Test_DeleteCmd_withForceFlag(t *testing.T) {
 	dir := t.TempDir()
 	cfg := filepath.Join(dir, "config")
 	writeTestConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	// 不注入确认函数 — --force 应跳过确认。
 	origForce := deleteForce
@@ -184,8 +184,8 @@ func Test_DeleteCmd_removesManagedKey(t *testing.T) {
 	writeTestConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n    IdentityFile "+keyPath+"\n")
 	writeTestConfig(t, keyPath, "fake-private-key")
 	writeTestConfig(t, keyPath+".pub", "fake-public-key")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	origConfirm := confirmDeleteFn
 	confirmDeleteFn = func(_ io.Writer, _, _, _ string) (bool, error) { return true, nil }
@@ -214,8 +214,8 @@ func Test_DeleteCmd_preservesExternalKey(t *testing.T) {
 	keyPath := filepath.Join(dir, "id_ed25519")
 	writeTestConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n    IdentityFile "+keyPath+"\n")
 	writeTestConfig(t, keyPath, "fake-external-key")
-	configFileFlag = cfg
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = cfg
+	t.Cleanup(func() { testConfigPath = "" })
 
 	origConfirm := confirmDeleteFn
 	confirmDeleteFn = func(_ io.Writer, _, _, _ string) (bool, error) { return true, nil }

@@ -12,8 +12,8 @@ import (
 )
 
 func Test_Search_matchesAliasViaCmd(t *testing.T) {
-	configFileFlag = fixtureConfig("multiple.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = fixtureConfig("multiple.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	if err := runSearchCmd([]string{"srv1"}, &stdout, &stderr); err != nil {
@@ -28,8 +28,8 @@ func Test_Search_matchesAliasViaCmd(t *testing.T) {
 }
 
 func Test_Search_multiKeywordOR(t *testing.T) {
-	configFileFlag = fixtureConfig("multiple.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = fixtureConfig("multiple.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	if err := runSearchCmd([]string{"srv1", "example"}, &stdout, &stderr); err != nil {
@@ -42,8 +42,8 @@ func Test_Search_multiKeywordOR(t *testing.T) {
 }
 
 func Test_Search_noMatch_returnsEmptyWithHint(t *testing.T) {
-	configFileFlag = fixtureConfig("multiple.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = fixtureConfig("multiple.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	if err := runSearchCmd([]string{"nomatch-xyz"}, &stdout, &stderr); err != nil {
@@ -59,8 +59,8 @@ func Test_Search_noMatch_returnsEmptyWithHint(t *testing.T) {
 }
 
 func Test_Search_invalidConfig_returnsParseError(t *testing.T) {
-	configFileFlag = fixtureConfig("invalid.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = fixtureConfig("invalid.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	err := runSearchCmd([]string{"foo"}, &stdout, &stderr)
@@ -77,8 +77,8 @@ func Test_Search_invalidConfig_returnsParseError(t *testing.T) {
 }
 
 func Test_Search_missingConfig_returnsExitCode3(t *testing.T) {
-	configFileFlag = filepath.Join(t.TempDir(), "no-such-config.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = filepath.Join(t.TempDir(), "no-such-config.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	err := runSearchCmd([]string{"foo"}, &stdout, &stderr)
@@ -94,9 +94,9 @@ func Test_Search_missingConfig_returnsExitCode3(t *testing.T) {
 }
 
 func Test_Search_withUserFlag(t *testing.T) {
-	configFileFlag = fixtureConfig("multiple.conf")
+	testConfigPath = fixtureConfig("multiple.conf")
 	t.Cleanup(func() {
-		configFileFlag = ""
+		testConfigPath = ""
 		resetSearchFlags()
 	})
 	searchUserFlag = "admin"
@@ -112,9 +112,9 @@ func Test_Search_withUserFlag(t *testing.T) {
 }
 
 func Test_Search_withPortFlag(t *testing.T) {
-	configFileFlag = fixtureConfig("multiple.conf")
+	testConfigPath = fixtureConfig("multiple.conf")
 	t.Cleanup(func() {
-		configFileFlag = ""
+		testConfigPath = ""
 		resetSearchFlags()
 	})
 	searchPortFlag = "2222"
@@ -131,8 +131,8 @@ func Test_Search_withPortFlag(t *testing.T) {
 
 func Test_Search_highlightDisabled_pipedOutput(t *testing.T) {
 	// stdout 为 bytes.Buffer（非 TTY），不应包含 ANSI 转义码。
-	configFileFlag = fixtureConfig("multiple.conf")
-	t.Cleanup(func() { configFileFlag = "" })
+	testConfigPath = fixtureConfig("multiple.conf")
+	t.Cleanup(func() { testConfigPath = "" })
 
 	var stdout, stderr bytes.Buffer
 	if err := runSearchCmd([]string{"srv1"}, &stdout, &stderr); err != nil {

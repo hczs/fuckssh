@@ -48,9 +48,9 @@ func TestRootHelp(t *testing.T) {
 }
 
 func TestExecute_printsElapsedOnList(t *testing.T) {
-	configFileFlag = fixtureConfig("multiple.conf")
+	testConfigPath = fixtureConfig("multiple.conf")
 	t.Cleanup(func() {
-		configFileFlag = ""
+		testConfigPath = ""
 		resetHelpFlags(rootCmd)
 	})
 
@@ -106,7 +106,9 @@ func TestEnsureLanguageFromSettings(t *testing.T) {
 	i18n.SetInteractiveOverrideForTest(func(io.Writer) bool { return false })
 
 	// list 会因文件不存在失败，但语言应已保持为 settings 中的 en
-	_ = ExecuteWithArgs([]string{"list", "--config", filepath.Join(t.TempDir(), "missing")})
+	testConfigPath = filepath.Join(t.TempDir(), "missing")
+	t.Cleanup(func() { testConfigPath = "" })
+	_ = ExecuteWithArgs([]string{"list"})
 	if i18n.Current() != i18n.LangEN {
 		t.Errorf("Current() = %q, want en", i18n.Current())
 	}

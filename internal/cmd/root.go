@@ -14,6 +14,9 @@ import (
 
 var helpLocalizedOnce sync.Once
 
+// testConfigPath 仅供测试使用，覆盖默认的 ~/.ssh/config 路径。
+var testConfigPath string
+
 // currentRunArgs 保存本轮 Execute 的参数（正式运行来自 os.Args，测试来自 ExecuteWithArgs）。
 var currentRunArgs []string
 
@@ -23,8 +26,6 @@ var (
 		Short: "Manage ~/.ssh/config for VPS hosts",
 		Long:  "fuckssh is a cross-platform CLI for SSH config, host listing, and search.",
 	}
-	// configFileFlag 允许用 --config 覆盖默认的 ~/.ssh/config 路径。
-	configFileFlag string
 )
 
 // runArgsForHelp 返回用于判断是否输出 help 耗时的参数列表。
@@ -93,17 +94,16 @@ func printCommandError(root *cobra.Command, args []string, err error) {
 	}
 }
 
-// ConfigFilePath 返回当前应读取的 ssh config 路径（优先 --config）。
+// ConfigFilePath 返回标准 ~/.ssh/config 路径。
 func ConfigFilePath() (string, error) {
-	if configFileFlag != "" {
-		return platform.ExpandPath(configFileFlag)
+	if testConfigPath != "" {
+		return testConfigPath, nil
 	}
 	return platform.DefaultConfigPath()
 }
 
 func init() {
 	rootCmd.PersistentPreRunE = rootPersistentPreRun
-	rootCmd.PersistentFlags().StringVar(&configFileFlag, "config", "", "path to ssh config file (default: ~/.ssh/config)")
 
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
