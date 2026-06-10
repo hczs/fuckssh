@@ -43,7 +43,7 @@ func appendHostUnlocked(path string, entry HostEntry) error {
 		port = "22"
 	}
 
-	block := formatHostBlock(entry.Alias, entry.HostName, entry.User, port, entry.IdentityFile, entry.Remark)
+	block := FormatHostBlock(entry.Alias, entry.HostName, entry.User, port, entry.IdentityFile, entry.Remark)
 
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 	if err != nil {
@@ -77,8 +77,8 @@ func HostAliasExists(path, alias string) (bool, error) {
 	return false, nil
 }
 
-// formatHostBlock 按 OpenSSH 常用顺序生成 Host 块文本。
-func formatHostBlock(alias, hostName, user, port, identityFile, remark string) string {
+// FormatHostBlock 按 OpenSSH 常用顺序生成 Host 块文本。
+func FormatHostBlock(alias, hostName, user, port, identityFile, remark string) string {
 	var b strings.Builder
 	b.WriteString("\n")
 	if s := strings.TrimSpace(remark); s != "" {
