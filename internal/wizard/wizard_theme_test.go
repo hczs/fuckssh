@@ -10,6 +10,7 @@ func TestWizardTheme_blurredTitleDiffersFromFocused(t *testing.T) {
 	tm := WizardTheme()
 	if tm == nil {
 		t.Fatal("WizardTheme returned nil")
+		return
 	}
 	fgFocused := tm.Focused.Title.GetForeground()
 	fgBlurred := tm.Blurred.Title.GetForeground()

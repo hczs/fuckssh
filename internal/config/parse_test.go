@@ -135,6 +135,7 @@ func TestParse_hostWithMultipleAliases(t *testing.T) {
 	}
 	if multi == nil {
 		t.Fatal("srv2 host not found")
+		return
 	}
 
 	want := []string{"srv2", "srv2-alt"}
