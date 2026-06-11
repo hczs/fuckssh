@@ -19,7 +19,7 @@ func TestRenameArchiveKeys(t *testing.T) {
 	}
 
 	renames := []config.RenameInfo{
-		{OldAlias: "myserver", NewAlias: "myserver-new"},
+		{OldAlias: "myserver", NewAlias: "myserver-new", OldIdentityFile: "~/.ssh/keys/" + oldPriv},
 	}
 
 	renameArchiveKeys(files, renames)
@@ -34,13 +34,33 @@ func TestRenameArchiveKeys(t *testing.T) {
 	}
 }
 
+func TestRenameArchiveKeysCustomKey(t *testing.T) {
+	// 测试自定义密钥名（非 fuckssh 命名规则）
+	newPriv, _ := keys.KeyPaths("myserver-new")
+
+	files := []vault.ExtractedFile{
+		{ArchivePath: "ssh/keys/my_rsa", Content: []byte("key-data"), Mode: 0o600},
+	}
+
+	renames := []config.RenameInfo{
+		{OldAlias: "myserver", NewAlias: "myserver-new", OldIdentityFile: "~/.ssh/my_rsa"},
+	}
+
+	renameArchiveKeys(files, renames)
+
+	expectedPath := "ssh/keys/" + newPriv
+	if files[0].ArchivePath != expectedPath {
+		t.Errorf("自定义密钥 archive 路径未更新: 期望 %q，got %q", expectedPath, files[0].ArchivePath)
+	}
+}
+
 func TestRenameArchiveKeysNoMatch(t *testing.T) {
 	files := []vault.ExtractedFile{
 		{ArchivePath: "ssh/keys/id_ed25519_fuckssh_other", Content: []byte("key"), Mode: 0o600},
 	}
 
 	renames := []config.RenameInfo{
-		{OldAlias: "myserver", NewAlias: "myserver-new"},
+		{OldAlias: "myserver", NewAlias: "myserver-new", OldIdentityFile: "~/.ssh/keys/id_ed25519_fuckssh_myserver"},
 	}
 
 	originalPath := files[0].ArchivePath
@@ -63,7 +83,7 @@ func TestUpdateIdentityFiles(t *testing.T) {
 	}
 
 	renames := []config.RenameInfo{
-		{OldAlias: "myserver", NewAlias: "myserver-new"},
+		{OldAlias: "myserver", NewAlias: "myserver-new", OldIdentityFile: "~/.ssh/keys/" + oldPriv},
 	}
 
 	updateIdentityFiles(merged, renames)
@@ -81,6 +101,35 @@ func TestUpdateIdentityFiles(t *testing.T) {
 	}
 }
 
+func TestUpdateIdentityFilesCustomKey(t *testing.T) {
+	// 测试自定义密钥名（非 fuckssh 命名规则）
+	newPriv, _ := keys.KeyPaths("myserver-new")
+
+	merged := []config.HostEntry{
+		// 原有 Host（未重命名，不应受影响）
+		{Alias: "myserver", IdentityFile: "~/.ssh/my_rsa"},
+		// 重命名后的 Host
+		{Alias: "myserver-new", IdentityFile: "~/.ssh/my_rsa"},
+	}
+
+	renames := []config.RenameInfo{
+		{OldAlias: "myserver", NewAlias: "myserver-new", OldIdentityFile: "~/.ssh/my_rsa"},
+	}
+
+	updateIdentityFiles(merged, renames)
+
+	// 原有 Host 的 IdentityFile 不应改变
+	if merged[0].IdentityFile != "~/.ssh/my_rsa" {
+		t.Errorf("原有 Host IdentityFile 不应改变: got %q", merged[0].IdentityFile)
+	}
+
+	// 重命名后的 Host 的 IdentityFile 应更新为新密钥名
+	expectedNew := filepath.Join("~/.ssh", newPriv)
+	if merged[1].IdentityFile != expectedNew {
+		t.Errorf("重命名 Host IdentityFile 应更新: 期望 %q，got %q", expectedNew, merged[1].IdentityFile)
+	}
+}
+
 func TestUpdateIdentityFilesMultipleRenames(t *testing.T) {
 	privA, _ := keys.KeyPaths("server-a")
 	privB, _ := keys.KeyPaths("server-b")
@@ -93,8 +142,8 @@ func TestUpdateIdentityFilesMultipleRenames(t *testing.T) {
 	}
 
 	renames := []config.RenameInfo{
-		{OldAlias: "server-a", NewAlias: "server-a2"},
-		{OldAlias: "server-b", NewAlias: "server-b2"},
+		{OldAlias: "server-a", NewAlias: "server-a2", OldIdentityFile: "~/.ssh/keys/" + privA},
+		{OldAlias: "server-b", NewAlias: "server-b2", OldIdentityFile: "~/.ssh/keys/" + privB},
 	}
 
 	updateIdentityFiles(merged, renames)
@@ -117,7 +166,7 @@ func TestUpdateIdentityFilesSkipsNonMatching(t *testing.T) {
 	}
 
 	renames := []config.RenameInfo{
-		{OldAlias: "myserver", NewAlias: "myserver-new"},
+		{OldAlias: "myserver", NewAlias: "myserver-new", OldIdentityFile: "~/.ssh/other_key"},
 	}
 
 	updateIdentityFiles(merged, renames)

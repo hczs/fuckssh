@@ -144,7 +144,7 @@ func TestMergeHostsRename(t *testing.T) {
 	}
 
 	incoming := []HostEntry{
-		{Alias: "myserver", Aliases: []string{"myserver"}, HostName: "2.2.2.2", User: "user"},
+		{Alias: "myserver", Aliases: []string{"myserver"}, HostName: "2.2.2.2", User: "user", IdentityFile: "~/.ssh/keys/id_ed25519_fuckssh_myserver"},
 	}
 
 	conflicts := map[string]ConflictInfo{
@@ -174,6 +174,33 @@ func TestMergeHostsRename(t *testing.T) {
 	}
 	if result.Renames[0].NewAlias != "myserver-new" {
 		t.Errorf("Renames[0].NewAlias 期望 myserver-new，got %q", result.Renames[0].NewAlias)
+	}
+	if result.Renames[0].OldIdentityFile != "~/.ssh/keys/id_ed25519_fuckssh_myserver" {
+		t.Errorf("Renames[0].OldIdentityFile 期望 ~/.ssh/keys/id_ed25519_fuckssh_myserver，got %q", result.Renames[0].OldIdentityFile)
+	}
+}
+
+func TestMergeHostsRenameCustomKey(t *testing.T) {
+	// 测试自定义密钥名的重命名场景
+	existing := []HostEntry{
+		{Alias: "myserver", Aliases: []string{"myserver"}, HostName: "1.1.1.1", User: "root"},
+	}
+
+	incoming := []HostEntry{
+		{Alias: "myserver", Aliases: []string{"myserver"}, HostName: "2.2.2.2", User: "user", IdentityFile: "~/.ssh/my_rsa"},
+	}
+
+	conflicts := map[string]ConflictInfo{
+		"myserver": {Alias: "myserver", Action: ConflictRename, NewAlias: "myserver-v2"},
+	}
+
+	_, result := MergeHosts(existing, incoming, conflicts)
+
+	if len(result.Renames) != 1 {
+		t.Fatalf("Renames 期望 1 条，got %d", len(result.Renames))
+	}
+	if result.Renames[0].OldIdentityFile != "~/.ssh/my_rsa" {
+		t.Errorf("Renames[0].OldIdentityFile 期望 ~/.ssh/my_rsa，got %q", result.Renames[0].OldIdentityFile)
 	}
 }
 

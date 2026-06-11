@@ -244,12 +244,17 @@ func serializeHostEntries(entries []config.HostEntry) string {
 }
 
 // renameArchiveKeys 将 archive 中与旧别名关联的密钥文件重命名为新别名对应的文件名。
+// 优先用 OldIdentityFile 定位密钥（支持自定义密钥名），为空时回退到 keys.KeyPaths 推导。
 func renameArchiveKeys(files []vault.ExtractedFile, renames []config.RenameInfo) {
 	for _, r := range renames {
-		oldPriv, _ := keys.KeyPaths(r.OldAlias)
+		// 用实际的 IdentityFile 定位密钥文件名，支持自定义密钥名
+		oldKeyFile := filepath.Base(r.OldIdentityFile)
+		if oldKeyFile == "" || oldKeyFile == "." {
+			oldKeyFile, _ = keys.KeyPaths(r.OldAlias)
+		}
 		newPriv, _ := keys.KeyPaths(r.NewAlias)
 
-		oldArchivePath := "ssh/keys/" + oldPriv
+		oldArchivePath := "ssh/keys/" + oldKeyFile
 		newArchivePath := "ssh/keys/" + newPriv
 
 		for i, f := range files {
@@ -262,23 +267,29 @@ func renameArchiveKeys(files []vault.ExtractedFile, renames []config.RenameInfo)
 }
 
 // updateIdentityFiles 更新合并后 Host 条目的 IdentityFile，使其指向新别名对应的密钥路径。
+// 优先用 OldIdentityFile 匹配（支持自定义密钥名），为空时回退到 keys.KeyPaths 推导。
 func updateIdentityFiles(merged []config.HostEntry, renames []config.RenameInfo) {
 	// 合并后的 entry.Alias 已经是新名字，所以用 newAlias 作为 key
-	renameMap := make(map[string]string) // newAlias → oldAlias
+	renameMap := make(map[string]config.RenameInfo) // newAlias → RenameInfo
 	for _, r := range renames {
-		renameMap[r.NewAlias] = r.OldAlias
+		renameMap[r.NewAlias] = r
 	}
 
 	for i, entry := range merged {
-		oldAlias, ok := renameMap[entry.Alias]
+		r, ok := renameMap[entry.Alias]
 		if !ok {
 			continue
 		}
-		oldPriv, _ := keys.KeyPaths(oldAlias)
-		newPriv, _ := keys.KeyPaths(entry.Alias)
+
+		// 用实际的 IdentityFile 匹配旧密钥文件名，支持自定义密钥名
+		oldKeyFile := filepath.Base(r.OldIdentityFile)
+		if oldKeyFile == "" || oldKeyFile == "." {
+			oldKeyFile, _ = keys.KeyPaths(r.OldAlias)
+		}
+		newPriv, _ := keys.KeyPaths(r.NewAlias)
 
 		// 如果当前 IdentityFile 指向旧密钥，更新为新密钥路径
-		if filepath.Base(entry.IdentityFile) == oldPriv {
+		if filepath.Base(entry.IdentityFile) == oldKeyFile {
 			dir := filepath.Dir(entry.IdentityFile)
 			merged[i].IdentityFile = filepath.Join(dir, newPriv)
 		}

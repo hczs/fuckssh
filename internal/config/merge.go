@@ -33,8 +33,9 @@ type HostSummary struct {
 
 // RenameInfo 记录一次重命名操作的旧别名和新别名。
 type RenameInfo struct {
-	OldAlias string
-	NewAlias string
+	OldAlias        string
+	NewAlias        string
+	OldIdentityFile string // 重命名前的 IdentityFile，用于定位密钥文件
 }
 
 // MergeResult 合并结果。
@@ -126,7 +127,11 @@ func MergeHosts(existing []HostEntry, incoming []HostEntry, conflicts map[string
 			}
 			merged = append(merged, renamed)
 			result.Renamed = append(result.Renamed, fmt.Sprintf("%s→%s", inc.Alias, newAlias))
-			result.Renames = append(result.Renames, RenameInfo{OldAlias: inc.Alias, NewAlias: newAlias})
+			result.Renames = append(result.Renames, RenameInfo{
+				OldAlias:        inc.Alias,
+				NewAlias:        newAlias,
+				OldIdentityFile: inc.IdentityFile,
+			})
 		}
 	}
 
