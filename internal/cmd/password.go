@@ -50,10 +50,10 @@ func readPasswordMasked(stderr io.Writer, prompt string) (string, error) {
 		if n == 1 {
 			switch tmp[0] {
 			case '\r', '\n': // 回车结束
-				_, _ = fmt.Fprintln(stderr)
+				_, _ = fmt.Fprint(stderr, "\r\n")
 				return string(buf), nil
 			case 3: // Ctrl+C
-				_, _ = fmt.Fprintln(stderr)
+				_, _ = fmt.Fprint(stderr, "\r\n")
 				return "", fmt.Errorf("用户取消")
 			case 127, 8: // Backspace / Delete
 				if len(buf) > 0 {
@@ -70,7 +70,7 @@ func readPasswordMasked(stderr io.Writer, prompt string) (string, error) {
 		}
 	}
 
-	_, _ = fmt.Fprintln(stderr)
+	_, _ = fmt.Fprint(stderr, "\r\n")
 	return string(buf), nil
 }
 
