@@ -4,13 +4,18 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
 func setupTestSSHDir(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	} else {
+		t.Setenv("HOME", home)
+	}
 	sshDir := filepath.Join(home, ".ssh")
 	keysDir := filepath.Join(sshDir, "keys")
 	if err := os.MkdirAll(keysDir, 0o700); err != nil {

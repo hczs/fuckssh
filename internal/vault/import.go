@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -105,6 +106,11 @@ func ImportFilesWithConfig(files []ExtractedFile, mergedConfig []byte, keyCtx Ke
 	return writeFiles(files, &keyCtx)
 }
 
+// isArchiveKeyPath 判断 tar 内路径是否为私钥文件（archive 内统一用 / 分隔）。
+func isArchiveKeyPath(archivePath string) bool {
+	return archivePath != "ssh/config" && path.Dir(archivePath) == "ssh/keys"
+}
+
 // writeFiles 将解包后的文件写入本机对应位置。
 func writeFiles(files []ExtractedFile, keyCtx *KeyWriteContext) (*ImportResult, error) {
 	result := &ImportResult{}
@@ -127,9 +133,10 @@ func writeFiles(files []ExtractedFile, keyCtx *KeyWriteContext) (*ImportResult, 
 			result.ConfigImported = true
 		}
 
-		isKeyFile := f.ArchivePath != "ssh/config" && filepath.Dir(f.ArchivePath) == "ssh/keys"
+		// tar 内路径始终用 /，须用 path 而非 filepath（Windows 上 filepath.Dir 会得到 ssh\keys）。
+		isKeyFile := isArchiveKeyPath(f.ArchivePath)
 		if isKeyFile {
-			skip, skipErr := shouldSkipKeyWrite(targetPath, f.Content, filepath.Base(f.ArchivePath), keyCtx)
+			skip, skipErr := shouldSkipKeyWrite(targetPath, f.Content, path.Base(f.ArchivePath), keyCtx)
 			if skipErr != nil {
 				return nil, skipErr
 			}

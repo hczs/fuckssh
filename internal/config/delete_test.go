@@ -4,12 +4,14 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestDeleteHost_removesOnlyEntry(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
 
@@ -25,6 +27,7 @@ func TestDeleteHost_removesOnlyEntry(t *testing.T) {
 
 func TestDeleteHost_removesOneOfMultiple(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host srv1\n    HostName 10.0.0.1\n    User admin\n\nHost srv2\n    HostName 10.0.0.2\n    User root\n")
 
@@ -46,6 +49,7 @@ func TestDeleteHost_removesOneOfMultiple(t *testing.T) {
 
 func TestDeleteHost_removesMiddleEntry(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host srv1\n    HostName 10.0.0.1\n    User admin\n\nHost srv2\n    HostName 10.0.0.2\n    User root\n\nHost srv3\n    HostName 10.0.0.3\n    User deploy\n")
 
@@ -67,6 +71,7 @@ func TestDeleteHost_removesMiddleEntry(t *testing.T) {
 
 func TestDeleteHost_removesRemarkWithBlock(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "# 生产环境\nHost prod\n    HostName 1.2.3.4\n    User root\n\nHost dev\n    HostName 10.0.0.1\n    User admin\n")
 
@@ -93,6 +98,7 @@ func TestDeleteHost_removesRemarkWithBlock(t *testing.T) {
 
 func TestDeleteHost_caseInsensitiveMatch(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host MyServer\n    HostName 1.2.3.4\n    User root\n")
 
@@ -111,6 +117,7 @@ func TestDeleteHost_caseInsensitiveMatch(t *testing.T) {
 
 func TestDeleteHost_matchesSecondaryAlias(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host primary secondary\n    HostName 1.2.3.4\n    User root\n")
 
@@ -129,6 +136,7 @@ func TestDeleteHost_matchesSecondaryAlias(t *testing.T) {
 
 func TestDeleteHost_aliasNotFound(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
 
@@ -143,6 +151,7 @@ func TestDeleteHost_aliasNotFound(t *testing.T) {
 
 func TestDeleteHost_emptyAlias(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
 
@@ -154,20 +163,23 @@ func TestDeleteHost_emptyAlias(t *testing.T) {
 
 func TestDeleteHost_createsBackup(t *testing.T) {
 	dir := t.TempDir()
-	cfg := filepath.Join(dir, "config")
+	setTestHome(t, dir)
+	sshDir := filepath.Join(dir, ".ssh")
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(sshDir, "config")
 	writeConfig(t, cfg, "Host myserver\n    HostName 1.2.3.4\n    User root\n")
 
 	if err := DeleteHost(cfg, "myserver"); err != nil {
 		t.Fatalf("DeleteHost: %v", err)
 	}
 
-	backupDir, err := filepath.EvalSymlinks(filepath.Join(dir, ".ssh", "backup"))
+	backupDir := filepath.Join(sshDir, "backup")
+	entries, err := os.ReadDir(backupDir)
 	if err != nil {
-		// Backup dir might be in platform default; check if any backup was created.
-		// The backup function uses platform.BackupDir() which may not be in dir.
-		return
+		t.Fatalf("ReadDir backup: %v", err)
 	}
-	entries, _ := os.ReadDir(backupDir)
 	if len(entries) == 0 {
 		t.Error("expected at least one backup file")
 	}
@@ -175,6 +187,7 @@ func TestDeleteHost_createsBackup(t *testing.T) {
 
 func TestDeleteHost_preservesOtherEntries(t *testing.T) {
 	dir := t.TempDir()
+	setTestHome(t, dir)
 	cfg := filepath.Join(dir, "config")
 	writeConfig(t, cfg, "# 备注1\nHost srv1\n    HostName 10.0.0.1\n    User admin\n    Port 2222\n\n# 备注2\nHost srv2\n    HostName example.com\n    User deploy\n")
 
@@ -214,4 +227,13 @@ func readRaw(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return string(raw)
+}
+
+func setTestHome(t *testing.T, dir string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", dir)
+	} else {
+		t.Setenv("HOME", dir)
+	}
 }
