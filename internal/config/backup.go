@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -43,11 +44,24 @@ func backupUnlocked(path string) (bakPath string, err error) {
 
 	base := filepath.Base(path)
 	ts := time.Now().UTC().Format("20060102T150405.000000000Z")
-	bakPath = filepath.Join(backupDir, base+".fuckssh.bak."+ts)
+	bakName := base + ".fuckssh.bak." + ts
+	bakPath = filepath.Join(backupDir, bakName)
 
-	dst, err := os.OpenFile(bakPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return "", fmt.Errorf("config: create backup %q: %w", bakPath, err)
+	var dst *os.File
+	for i := 0; i < 100; i++ {
+		if i > 0 {
+			bakPath = filepath.Join(backupDir, fmt.Sprintf("%s-%d", bakName, i))
+		}
+		dst, err = os.OpenFile(bakPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return "", fmt.Errorf("config: create backup %q: %w", bakPath, err)
+		}
+	}
+	if dst == nil {
+		return "", fmt.Errorf("config: create backup: too many collisions for %q", bakName)
 	}
 	defer func() { _ = dst.Close() }()
 

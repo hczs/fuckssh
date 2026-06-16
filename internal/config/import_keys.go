@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 
 	"github.com/fuckssh/fuckssh/internal/keys"
@@ -250,12 +251,13 @@ func filterArchiveKeys(files *[]vault.ExtractedFile, keepKeys map[string]bool) {
 			n++
 			continue
 		}
-		if filepath.Dir(f.ArchivePath) != "ssh/keys" {
+		// tar 内路径始终用 /，须用 path 而非 filepath。
+		if path.Dir(f.ArchivePath) != "ssh/keys" {
 			list[n] = f
 			n++
 			continue
 		}
-		base := filepath.Base(f.ArchivePath)
+		base := path.Base(f.ArchivePath)
 		if keepKeys != nil && keepKeys[base] {
 			list[n] = f
 			n++

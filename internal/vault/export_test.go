@@ -3,6 +3,7 @@ package vault
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -25,7 +26,11 @@ Host b
 
 func TestCollectFilesIncludesCustomIdentityKey(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("HOME", home)
+	if runtime.GOOS == "windows" {
+		t.Setenv("USERPROFILE", home)
+	} else {
+		t.Setenv("HOME", home)
+	}
 
 	sshDir := filepath.Join(home, ".ssh")
 	keysDir := filepath.Join(sshDir, "keys")

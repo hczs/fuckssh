@@ -60,7 +60,7 @@ func TestPrepareImportKeys_skipHostRemovesKey(t *testing.T) {
 }
 
 func TestPrepareImportKeys_renamesKeyForDifferentAlias(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	sharedPriv := "id_ed25519_fuckssh_shared"
 	stagingPriv, _ := keys.KeyPaths("staging")
@@ -112,7 +112,7 @@ func TestPrepareImportKeys_renamesKeyForDifferentAlias(t *testing.T) {
 }
 
 func TestPrepareImportKeys_conflictRenameUpdatesHostAndKey(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	oldPriv, _ := keys.KeyPaths("myserver")
 	newPriv, _ := keys.KeyPaths("myserver-new")
@@ -164,7 +164,7 @@ func TestPrepareImportKeys_conflictRenameUpdatesHostAndKey(t *testing.T) {
 }
 
 func TestPrepareImportKeys_customKeyRenamedOnHostRename(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	newPriv, _ := keys.KeyPaths("myserver-new")
 	files := []vault.ExtractedFile{
@@ -195,7 +195,7 @@ func TestPrepareImportKeys_customKeyRenamedOnHostRename(t *testing.T) {
 }
 
 func TestPrepareImportKeys_filtersOrphanKeys(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	stagingPriv, _ := keys.KeyPaths("staging")
 	files := []vault.ExtractedFile{
@@ -222,7 +222,7 @@ func TestPrepareImportKeys_filtersOrphanKeys(t *testing.T) {
 }
 
 func TestPrepareImportKeys_conflictRenameCustomExternalKey(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	targetPriv, _ := keys.KeyPaths("t1")
 	files := []vault.ExtractedFile{
@@ -261,7 +261,7 @@ func TestPrepareImportKeys_conflictRenameCustomExternalKey(t *testing.T) {
 }
 
 func TestPrepareImportKeys_conflictRenameWhenIdentityAlreadyTargetName(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	// 复现：备份里 Host 别名 foo，但 IdentityFile 已指向 t1 的密钥名；
 	// archive 实际只有 foo 别名对应的私钥文件。冲突导入重命名为 t1 后，必须把 foo 密钥移到 t1。
@@ -304,7 +304,7 @@ func TestPrepareImportKeys_conflictRenameWhenIdentityAlreadyTargetName(t *testin
 }
 
 func TestPrepareImportKeys_missingArchiveKeyReturnsError(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setTestHome(t, t.TempDir())
 
 	files := []vault.ExtractedFile{
 		{ArchivePath: "ssh/config", Content: []byte("config"), Mode: 0o600},
