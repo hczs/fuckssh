@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/hczs/fuckssh/actions/workflows/ci.yml/badge.svg)](https://github.com/hczs/fuckssh/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hczs/fuckssh)](https://goreportcard.com/report/github.com/hczs/fuckssh)
-[![Release](https://img.shields.io/badge/release-v0.5.0-blue)](https://github.com/hczs/fuckssh/releases)
+[![Release](https://img.shields.io/badge/release-v0.6.0-blue)](https://github.com/hczs/fuckssh/releases)
 
 > 跨平台 VPS SSH 配置 CLI：IP + 密码几分钟搞定免密登录，只读写标准 `~/.ssh/config`。
 
@@ -101,7 +101,7 @@ fuckssh search --user root --port 2222 web
 curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 ```
 
-指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.5.0`
+指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.6.0`
 
 **Windows**（PowerShell）：
 
@@ -332,7 +332,7 @@ $ fuckssh import fuckssh-backup-20260616-102739.tar.enc
 ```bash
 $ fuckssh v
 
-v0.5.0 (abc1234, 2026-06-16)
+v0.6.0 (abc1234, 2026-06-16)
 ```
 
 ## 设计原则
@@ -370,7 +370,7 @@ make hooks    # 一次性启用 pre-commit（提交时自动 fmt + lint）
 
 克隆仓库后建议执行一次 `make hooks`，之后每次 `git commit` 会对**已暂存**的 `.go` 文件运行 `gofmt`/`goimports` 并执行 `golangci-lint`。
 
-推送 `v*` 标签（如 `v0.5.0`）会触发 [Release 工作流](.github/workflows/release.yml)，由 GoReleaser 构建并发布到 GitHub Releases。本地试跑：`make release-dry`。
+推送 `v*` 标签（如 `v0.6.0`）会触发 [Release 工作流](.github/workflows/release.yml)，由 GoReleaser 构建并发布到 GitHub Releases。本地试跑：`make release-dry`。
 
 | 触发 | 工作流 | 说明 |
 |------|--------|------|

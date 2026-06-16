@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/hczs/fuckssh/actions/workflows/ci.yml/badge.svg)](https://github.com/hczs/fuckssh/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hczs/fuckssh)](https://goreportcard.com/report/github.com/hczs/fuckssh)
-[![Release](https://img.shields.io/badge/release-v0.5.0-blue)](https://github.com/hczs/fuckssh/releases)
+[![Release](https://img.shields.io/badge/release-v0.6.0-blue)](https://github.com/hczs/fuckssh/releases)
 
 > Cross-platform CLI for VPS SSH — from IP + password to `ssh my-vps` in minutes, using only standard `~/.ssh/config`.
 
@@ -101,7 +101,7 @@ fuckssh search --user root --port 2222 web
 curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 ```
 
-Pin a version: `curl -fsSL .../install.sh | sh -s -- --version v0.5.0`
+Pin a version: `curl -fsSL .../install.sh | sh -s -- --version v0.6.0`
 
 **Windows** (PowerShell):
 
@@ -332,7 +332,7 @@ $ fuckssh import fuckssh-backup-20260616-102739.tar.enc
 ```bash
 $ fuckssh v
 
-v0.5.0 (abc1234, 2026-06-16)
+v0.6.0 (abc1234, 2026-06-16)
 ```
 
 ## Design principles
@@ -370,7 +370,7 @@ make hooks    # enable pre-commit (auto fmt + lint on staged .go files)
 
 After cloning, run `make hooks` once. Every `git commit` will then auto-format and lint staged `.go` files.
 
-Push a `v*` tag (e.g. `v0.5.0`) to trigger the [Release workflow](.github/workflows/release.yml) — GoReleaser builds and publishes to GitHub Releases. Dry run locally: `make release-dry`.
+Push a `v*` tag (e.g. `v0.6.0`) to trigger the [Release workflow](.github/workflows/release.yml) — GoReleaser builds and publishes to GitHub Releases. Dry run locally: `make release-dry`.
 
 | Trigger | Workflow | Description |
 |---------|----------|-------------|
