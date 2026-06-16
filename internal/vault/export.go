@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fuckssh/fuckssh/internal/platform"
@@ -80,23 +81,26 @@ type backupFile struct {
 	Mode os.FileMode
 }
 
-// collectFiles 收集 ~/.ssh/config 和 ~/.ssh/keys/ 下的私钥文件。
+// collectFiles 收集 ~/.ssh/config、~/.ssh/keys/ 下的私钥，以及 config 引用的自定义路径私钥。
 func collectFiles() ([]backupFile, int, int, error) {
 	var files []backupFile
 	var hostCount, keyCount int
+	collectedAbs := make(map[string]struct{})
 
 	// 1. 收集 ssh config
 	configPath, err := defaultConfigPath()
 	if err != nil {
 		return nil, 0, 0, err
 	}
+
+	var configData []byte
 	if data, err := os.ReadFile(configPath); err == nil {
+		configData = data
 		files = append(files, backupFile{
 			ArchivePath: "ssh/config",
 			Content:     data,
 			Mode:        0o600,
 		})
-		// 粗略统计 Host 条目数
 		hostCount = countHosts(data)
 	} else if !os.IsNotExist(err) {
 		return nil, 0, 0, fmt.Errorf("读取 config 失败: %w", err)
@@ -109,11 +113,7 @@ func collectFiles() ([]backupFile, int, int, error) {
 	}
 
 	entries, err := os.ReadDir(keysDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// keys 目录不存在，只导出 config
-			return files, hostCount, 0, nil
-		}
+	if err != nil && !os.IsNotExist(err) {
 		return nil, 0, 0, fmt.Errorf("读取 keys 目录失败: %w", err)
 	}
 
@@ -122,7 +122,6 @@ func collectFiles() ([]backupFile, int, int, error) {
 			continue
 		}
 		name := entry.Name()
-		// 跳过公钥文件（.pub），只导出私钥
 		if filepath.Ext(name) == ".pub" {
 			continue
 		}
@@ -130,7 +129,7 @@ func collectFiles() ([]backupFile, int, int, error) {
 		keyPath := filepath.Join(keysDir, name)
 		data, err := os.ReadFile(keyPath)
 		if err != nil {
-			continue // 跳过读不出来的文件
+			continue
 		}
 
 		files = append(files, backupFile{
@@ -138,10 +137,84 @@ func collectFiles() ([]backupFile, int, int, error) {
 			Content:     data,
 			Mode:        0o600,
 		})
+		collectedAbs[filepath.Clean(keyPath)] = struct{}{}
 		keyCount++
 	}
 
+	// 3. 收集 config 中 IdentityFile 引用的、位于 keys 目录外的私钥（如 ~/dev/ssh_keys/mac.pem）
+	if len(configData) > 0 {
+		extra, extraCount, err := collectReferencedIdentityKeys(configData, collectedAbs)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		files = append(files, extra...)
+		keyCount += extraCount
+	}
+
 	return files, hostCount, keyCount, nil
+}
+
+// collectReferencedIdentityKeys 打包 config 引用但不在 collectedAbs 中的私钥，archive 内统一为 ssh/keys/<basename>。
+func collectReferencedIdentityKeys(configData []byte, collectedAbs map[string]struct{}) ([]backupFile, int, error) {
+	var files []backupFile
+	archiveNames := make(map[string]struct{})
+	var count int
+
+	for _, identityRef := range identityFilesFromConfig(configData) {
+		absPath, err := platform.ExpandPath(identityRef)
+		if err != nil || absPath == "" {
+			continue
+		}
+		absPath = filepath.Clean(absPath)
+		if filepath.Ext(absPath) == ".pub" {
+			continue
+		}
+		if _, ok := collectedAbs[absPath]; ok {
+			continue
+		}
+
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			continue
+		}
+
+		base := filepath.Base(absPath)
+		if _, dup := archiveNames[base]; dup {
+			continue
+		}
+
+		files = append(files, backupFile{
+			ArchivePath: "ssh/keys/" + base,
+			Content:     data,
+			Mode:        0o600,
+		})
+		collectedAbs[absPath] = struct{}{}
+		archiveNames[base] = struct{}{}
+		count++
+	}
+
+	return files, count, nil
+}
+
+// identityFilesFromConfig 从 ssh config 文本中提取所有 IdentityFile 路径。
+func identityFilesFromConfig(data []byte) []string {
+	var paths []string
+	for _, line := range strings.Split(string(data), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		lower := strings.ToLower(trimmed)
+		if !strings.HasPrefix(lower, "identityfile") {
+			continue
+		}
+		fields := strings.Fields(trimmed)
+		if len(fields) < 2 {
+			continue
+		}
+		paths = append(paths, fields[len(fields)-1])
+	}
+	return paths
 }
 
 // createTar 将文件列表打包成 gzip 压缩的 tar。

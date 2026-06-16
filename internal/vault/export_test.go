@@ -7,6 +7,72 @@ import (
 	"testing"
 )
 
+func TestIdentityFilesFromConfig(t *testing.T) {
+	data := []byte(`Host a
+    IdentityFile ~/.ssh/keys/id_ed25519_fuckssh_a
+
+Host b
+    IdentityFile ~/dev/ssh_keys/mac.pem
+`)
+	got := identityFilesFromConfig(data)
+	if len(got) != 2 {
+		t.Fatalf("identityFilesFromConfig = %v", got)
+	}
+	if got[1] != "~/dev/ssh_keys/mac.pem" {
+		t.Errorf("got %q", got[1])
+	}
+}
+
+func TestCollectFilesIncludesCustomIdentityKey(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	sshDir := filepath.Join(home, ".ssh")
+	keysDir := filepath.Join(sshDir, "keys")
+	customDir := filepath.Join(home, "dev", "ssh_keys")
+	if err := os.MkdirAll(keysDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(customDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	configContent := `Host tencentrb
+    HostName 124.156.223.9
+    User ubuntu
+    IdentityFile ~/dev/ssh_keys/mac.pem
+`
+	if err := os.WriteFile(filepath.Join(sshDir, "config"), []byte(configContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	macKey := []byte("-----BEGIN OPENSSH PRIVATE KEY-----\nmac\n-----END OPENSSH PRIVATE KEY-----\n")
+	if err := os.WriteFile(filepath.Join(customDir, "mac.pem"), macKey, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	files, _, keyCount, err := collectFiles()
+	if err != nil {
+		t.Fatalf("collectFiles: %v", err)
+	}
+	if keyCount != 1 {
+		t.Fatalf("keyCount = %d, want 1", keyCount)
+	}
+
+	var found bool
+	for _, f := range files {
+		if f.ArchivePath == "ssh/keys/mac.pem" {
+			found = true
+			if string(f.Content) != string(macKey) {
+				t.Fatal("mac.pem 内容不匹配")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("archive 应包含 ssh/keys/mac.pem")
+	}
+}
+
 func TestExportAndImportRoundTrip(t *testing.T) {
 	// 创建临时目录模拟 ~/.ssh
 	tmpDir := t.TempDir()

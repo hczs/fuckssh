@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/fuckssh/fuckssh/internal/config"
-	"github.com/fuckssh/fuckssh/internal/keys"
 	"github.com/fuckssh/fuckssh/internal/vault"
 	"github.com/spf13/cobra"
 )
@@ -95,14 +93,11 @@ func runImportCmd(stdout, stderr io.Writer, filePath string) error {
 	conflicts := config.FindConflicts(existing, incoming)
 
 	if len(conflicts) == 0 {
-		// 无冲突，直接导入
+		// 无冲突，合并后导入
+		merged := append([]config.HostEntry(nil), existing...)
+		merged = append(merged, incoming...)
 		_, _ = fmt.Fprintf(stdout, "✓ 发现 %d 个 Host 配置，无冲突\n", len(incoming))
-		result, err := vault.ImportFiles(files)
-		if err != nil {
-			return err
-		}
-		printImportResult(stdout, result, len(incoming))
-		return nil
+		return finishImport(stdout, files, merged, incoming, nil)
 	}
 
 	// 有冲突，逐个询问
@@ -130,23 +125,46 @@ func runImportCmd(stdout, stderr io.Writer, filePath string) error {
 	// 执行合并
 	merged, mergeResult := config.MergeHosts(existing, incoming, conflictMap)
 
-	// 重命名的 Host 需要同步更新 IdentityFile 和 archive 中的密钥文件
-	if len(mergeResult.Renames) > 0 {
-		renameArchiveKeys(files, mergeResult.Renames)
-		updateIdentityFiles(merged, mergeResult.Renames)
-	}
+	return finishImportWithMerge(stdout, files, merged, incoming, mergeResult)
+}
 
-	// 序列化合并后的 config
-	mergedContent := serializeHostEntries(merged)
-
-	// 写入合并后的 config + 导入密钥（复用已解密的 files，不再重复解密）
-	result, err := vault.ImportFilesWithConfig(files, []byte(mergedContent))
+// finishImport 规范化密钥、写入 config 与密钥（无 Host 冲突路径）。
+func finishImport(stdout io.Writer, files []vault.ExtractedFile, merged []config.HostEntry, incoming []config.HostEntry, mergeResult *config.MergeResult) error {
+	keyPlan, err := config.PrepareImportKeys(&files, &merged, incoming, mergeResult)
 	if err != nil {
 		return err
 	}
 
-	// 输出合并结果
-	printMergeResult(stdout, result, mergeResult)
+	toImport := config.IncomingHostsToImport(incoming, mergeResult)
+	keyCtx := config.BuildKeyWriteContext(merged, toImport)
+	mergedContent := []byte(serializeHostEntries(merged))
+
+	result, err := vault.ImportFilesWithConfig(files, mergedContent, keyCtx)
+	if err != nil {
+		return err
+	}
+
+	printImportResult(stdout, result, len(incoming), keyPlan)
+	return nil
+}
+
+// finishImportWithMerge 合并导入路径的结果输出。
+func finishImportWithMerge(stdout io.Writer, files []vault.ExtractedFile, merged []config.HostEntry, incoming []config.HostEntry, mergeResult *config.MergeResult) error {
+	keyPlan, err := config.PrepareImportKeys(&files, &merged, incoming, mergeResult)
+	if err != nil {
+		return err
+	}
+
+	toImport := config.IncomingHostsToImport(incoming, mergeResult)
+	keyCtx := config.BuildKeyWriteContext(merged, toImport)
+	mergedContent := []byte(serializeHostEntries(merged))
+
+	result, err := vault.ImportFilesWithConfig(files, mergedContent, keyCtx)
+	if err != nil {
+		return err
+	}
+
+	printMergeResult(stdout, result, mergeResult, keyPlan)
 	return nil
 }
 
@@ -196,21 +214,19 @@ func askNewAlias(reader *bufio.Reader, stdout io.Writer, oldAlias string) string
 }
 
 // printImportResult 输出简单导入的结果。
-func printImportResult(stdout io.Writer, result *vault.ImportResult, hostCount int) {
+func printImportResult(stdout io.Writer, result *vault.ImportResult, hostCount int, keyPlan *config.KeyImportPlan) {
 	_, _ = fmt.Fprintf(stdout, "✓ 导入成功\n")
 	if result.ConfigImported {
 		_, _ = fmt.Fprintf(stdout, "  SSH config: %d 个 Host 已导入\n", hostCount)
 	}
-	if result.KeysImported > 0 {
-		_, _ = fmt.Fprintf(stdout, "  私钥文件: %d 个\n", result.KeysImported)
-	}
+	printKeyImportStats(stdout, result, keyPlan)
 	if result.BackupPath != "" {
 		_, _ = fmt.Fprintf(stdout, "  原 config 已备份: %s\n", result.BackupPath)
 	}
 }
 
 // printMergeResult 输出合并导入的结果。
-func printMergeResult(stdout io.Writer, result *vault.ImportResult, merge *config.MergeResult) {
+func printMergeResult(stdout io.Writer, result *vault.ImportResult, merge *config.MergeResult, keyPlan *config.KeyImportPlan) {
 	_, _ = fmt.Fprintf(stdout, "✓ 合并导入完成\n")
 
 	if len(merge.Imported) > 0 {
@@ -226,11 +242,22 @@ func printMergeResult(stdout io.Writer, result *vault.ImportResult, merge *confi
 		_, _ = fmt.Fprintf(stdout, "  已跳过: %s\n", strings.Join(merge.Skipped, ", "))
 	}
 
+	printKeyImportStats(stdout, result, keyPlan)
+	if result.BackupPath != "" {
+		_, _ = fmt.Fprintf(stdout, "  原 config 已备份: %s\n", result.BackupPath)
+	}
+}
+
+// printKeyImportStats 输出密钥导入统计与重命名信息。
+func printKeyImportStats(stdout io.Writer, result *vault.ImportResult, keyPlan *config.KeyImportPlan) {
+	if keyPlan != nil && len(keyPlan.KeysRenamed) > 0 {
+		_, _ = fmt.Fprintf(stdout, "  密钥已按别名重命名: %s\n", strings.Join(keyPlan.KeysRenamed, ", "))
+	}
 	if result.KeysImported > 0 {
 		_, _ = fmt.Fprintf(stdout, "  私钥文件: %d 个\n", result.KeysImported)
 	}
-	if result.BackupPath != "" {
-		_, _ = fmt.Fprintf(stdout, "  原 config 已备份: %s\n", result.BackupPath)
+	if result.KeysSkipped > 0 {
+		_, _ = fmt.Fprintf(stdout, "  私钥已存在且内容相同，未覆盖: %d 个\n", result.KeysSkipped)
 	}
 }
 
@@ -241,57 +268,4 @@ func serializeHostEntries(entries []config.HostEntry) string {
 		b.WriteString(config.FormatHostBlock(e.Alias, e.HostName, e.User, e.Port, e.IdentityFile, e.Remark))
 	}
 	return b.String()
-}
-
-// renameArchiveKeys 将 archive 中与旧别名关联的密钥文件重命名为新别名对应的文件名。
-// 优先用 OldIdentityFile 定位密钥（支持自定义密钥名），为空时回退到 keys.KeyPaths 推导。
-func renameArchiveKeys(files []vault.ExtractedFile, renames []config.RenameInfo) {
-	for _, r := range renames {
-		// 用实际的 IdentityFile 定位密钥文件名，支持自定义密钥名
-		oldKeyFile := filepath.Base(r.OldIdentityFile)
-		if oldKeyFile == "" || oldKeyFile == "." {
-			oldKeyFile, _ = keys.KeyPaths(r.OldAlias)
-		}
-		newPriv, _ := keys.KeyPaths(r.NewAlias)
-
-		oldArchivePath := "ssh/keys/" + oldKeyFile
-		newArchivePath := "ssh/keys/" + newPriv
-
-		for i, f := range files {
-			if f.ArchivePath == oldArchivePath {
-				files[i].ArchivePath = newArchivePath
-				break
-			}
-		}
-	}
-}
-
-// updateIdentityFiles 更新合并后 Host 条目的 IdentityFile，使其指向新别名对应的密钥路径。
-// 优先用 OldIdentityFile 匹配（支持自定义密钥名），为空时回退到 keys.KeyPaths 推导。
-func updateIdentityFiles(merged []config.HostEntry, renames []config.RenameInfo) {
-	// 合并后的 entry.Alias 已经是新名字，所以用 newAlias 作为 key
-	renameMap := make(map[string]config.RenameInfo) // newAlias → RenameInfo
-	for _, r := range renames {
-		renameMap[r.NewAlias] = r
-	}
-
-	for i, entry := range merged {
-		r, ok := renameMap[entry.Alias]
-		if !ok {
-			continue
-		}
-
-		// 用实际的 IdentityFile 匹配旧密钥文件名，支持自定义密钥名
-		oldKeyFile := filepath.Base(r.OldIdentityFile)
-		if oldKeyFile == "" || oldKeyFile == "." {
-			oldKeyFile, _ = keys.KeyPaths(r.OldAlias)
-		}
-		newPriv, _ := keys.KeyPaths(r.NewAlias)
-
-		// 如果当前 IdentityFile 指向旧密钥，更新为新密钥路径
-		if filepath.Base(entry.IdentityFile) == oldKeyFile {
-			dir := filepath.Dir(entry.IdentityFile)
-			merged[i].IdentityFile = filepath.Join(dir, newPriv)
-		}
-	}
 }

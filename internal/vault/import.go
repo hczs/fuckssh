@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,10 +15,22 @@ import (
 	"github.com/fuckssh/fuckssh/internal/platform"
 )
 
+// ErrKeyWouldOverwrite 表示导入密钥会覆盖仍被其他 Host 引用的已有私钥。
+var ErrKeyWouldOverwrite = errors.New("vault: import would overwrite key file used by another host")
+
+// KeyWriteContext 导入写盘时的密钥归属与引用信息（由 config 层构建）。
+type KeyWriteContext struct {
+	// KeyOwner 记录本次导入写入的私钥文件名 → 归属 Host 别名。
+	KeyOwner map[string]string
+	// KeyRefs 记录 merged config 中私钥文件名 → 引用它的 Host 别名列表。
+	KeyRefs map[string][]string
+}
+
 // ImportResult 导入结果。
 type ImportResult struct {
 	ConfigImported bool   // 是否导入了 config
 	KeysImported   int    // 导入的私钥文件数
+	KeysSkipped    int    // 内容相同、未重复写入的私钥数
 	BackupPath     string // 原有 config 的备份路径（如果有）
 }
 
@@ -71,16 +84,16 @@ func ImportWithConfig(filePath string, password string, mergedConfig []byte) (*I
 		return nil, err
 	}
 
-	return ImportFilesWithConfig(files, mergedConfig)
+	return ImportFilesWithConfig(files, mergedConfig, KeyWriteContext{})
 }
 
 // ImportFiles 将已解密的文件列表写入本机（简单模式，直接覆盖写入）。
 func ImportFiles(files []ExtractedFile) (*ImportResult, error) {
-	return writeFiles(files)
+	return writeFiles(files, nil)
 }
 
 // ImportFilesWithConfig 将已解密的文件列表写入本机，config 内容由调用方提供。
-func ImportFilesWithConfig(files []ExtractedFile, mergedConfig []byte) (*ImportResult, error) {
+func ImportFilesWithConfig(files []ExtractedFile, mergedConfig []byte, keyCtx KeyWriteContext) (*ImportResult, error) {
 	// 用合并后的 config 替换备份中的 config
 	for i, f := range files {
 		if f.ArchivePath == "ssh/config" {
@@ -89,11 +102,11 @@ func ImportFilesWithConfig(files []ExtractedFile, mergedConfig []byte) (*ImportR
 		}
 	}
 
-	return writeFiles(files)
+	return writeFiles(files, &keyCtx)
 }
 
 // writeFiles 将解包后的文件写入本机对应位置。
-func writeFiles(files []ExtractedFile) (*ImportResult, error) {
+func writeFiles(files []ExtractedFile, keyCtx *KeyWriteContext) (*ImportResult, error) {
 	result := &ImportResult{}
 	sshDir, err := defaultSSHDir()
 	if err != nil {
@@ -114,13 +127,24 @@ func writeFiles(files []ExtractedFile) (*ImportResult, error) {
 			result.ConfigImported = true
 		}
 
+		isKeyFile := f.ArchivePath != "ssh/config" && filepath.Dir(f.ArchivePath) == "ssh/keys"
+		if isKeyFile {
+			skip, skipErr := shouldSkipKeyWrite(targetPath, f.Content, filepath.Base(f.ArchivePath), keyCtx)
+			if skipErr != nil {
+				return nil, skipErr
+			}
+			if skip {
+				result.KeysSkipped++
+				continue
+			}
+		}
+
 		// 创建目录（如果需要）
 		dir := filepath.Dir(targetPath)
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return nil, fmt.Errorf("创建目录 %s 失败: %w", dir, err)
 		}
 
-		// 写入文件
 		mode := f.Mode
 		if mode == 0 {
 			mode = 0o600
@@ -134,13 +158,39 @@ func writeFiles(files []ExtractedFile) (*ImportResult, error) {
 			_ = os.Chmod(targetPath, mode)
 		}
 
-		// 统计密钥数
-		if f.ArchivePath != "ssh/config" && filepath.Dir(f.ArchivePath) == "ssh/keys" {
+		if isKeyFile {
 			result.KeysImported++
 		}
 	}
 
 	return result, nil
+}
+
+// shouldSkipKeyWrite 检查是否应跳过密钥写入（内容相同）或拒绝覆盖（被其他 Host 引用）。
+func shouldSkipKeyWrite(targetPath string, incoming []byte, keyBasename string, keyCtx *KeyWriteContext) (skip bool, err error) {
+	existing, readErr := os.ReadFile(targetPath)
+	if readErr != nil {
+		if os.IsNotExist(readErr) {
+			return false, nil
+		}
+		return false, fmt.Errorf("读取已有密钥 %s 失败: %w", targetPath, readErr)
+	}
+
+	if bytes.Equal(existing, incoming) {
+		return true, nil
+	}
+
+	if keyCtx == nil {
+		return false, nil
+	}
+
+	owner := keyCtx.KeyOwner[keyBasename]
+	for _, alias := range keyCtx.KeyRefs[keyBasename] {
+		if alias != owner {
+			return false, fmt.Errorf("%w: %s (referenced by %q)", ErrKeyWouldOverwrite, keyBasename, alias)
+		}
+	}
+	return false, nil
 }
 
 // GetConfigContent 从解包文件列表中提取 config 内容。
