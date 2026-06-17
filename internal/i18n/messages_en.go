@@ -15,6 +15,8 @@ var messagesEN = map[string]string{
 	KeySearchLong:   "Match hosts by alias, HostName, or IP substring.",
 	KeyVersionShort: "Print version information",
 	KeyVersionLong:  "Print the fuckssh version, commit hash, and build date.",
+	KeyUpdateShort:  "Update fuckssh to the latest release",
+	KeyUpdateLong:   "Download the latest fuckssh release from GitHub and replace the current binary.",
 	KeyConfigFlag:   "path to ssh config file (default: ~/.ssh/config)",
 	KeyCmdElapsedMs: "Elapsed: %d ms\n",
 
@@ -167,4 +169,8 @@ var messagesEN = map[string]string{
 		"  · Login: %s@%s:%s\n" +
 		"  · Config: %s",
 	KeyEditSuccess: "Host %q updated\n",
+
+	KeyUpdateAlreadyLatest: "Already on latest version (%s).\n",
+	KeyUpdateAvailable:     "Update available: %s -> %s\n",
+	KeyUpdateSuccess:       "Updated to %s\nInstalled: %s\n",
 }

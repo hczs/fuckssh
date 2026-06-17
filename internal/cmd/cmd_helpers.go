@@ -56,6 +56,8 @@ func applyLocalizedHelp() {
 	deleteCmd.Long = i18n.T(i18n.KeyDeleteLong)
 	versionCmd.Short = i18n.T(i18n.KeyVersionShort)
 	versionCmd.Long = i18n.T(i18n.KeyVersionLong)
+	updateCmd.Short = i18n.T(i18n.KeyUpdateShort)
+	updateCmd.Long = i18n.T(i18n.KeyUpdateLong)
 	if f := searchCmd.Flags().Lookup("user"); f != nil {
 		f.Usage = i18n.T(i18n.KeySearchFlagUser)
 	}
