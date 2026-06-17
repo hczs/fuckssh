@@ -15,6 +15,8 @@ var messagesZH = map[string]string{
 	KeySearchLong:   "在别名、HostName、IP 中进行关键词匹配。",
 	KeyVersionShort: "查看版本信息",
 	KeyVersionLong:  "输出 fuckssh 版本号、commit hash 与构建日期。",
+	KeyUpdateShort:  "更新 fuckssh 到最新版本",
+	KeyUpdateLong:   "从 GitHub Releases 下载最新版 fuckssh 并替换当前二进制。",
 	KeyConfigFlag:   "ssh config 文件路径（默认 ~/.ssh/config）",
 	KeyCmdElapsedMs: "执行耗时 %d ms\n",
 
@@ -167,4 +169,8 @@ var messagesZH = map[string]string{
 		"  · 登录地址: %s@%s:%s\n" +
 		"  · 配置文件: %s",
 	KeyEditSuccess: "已更新 Host %q\n",
+
+	KeyUpdateAlreadyLatest: "当前已是最新版本（%s）。\n",
+	KeyUpdateAvailable:     "发现新版本：%s -> %s\n",
+	KeyUpdateSuccess:       "已更新到 %s\n安装路径: %s\n",
 }

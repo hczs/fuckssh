@@ -14,6 +14,8 @@ const (
 	KeyDeleteLong   = "cmd.delete.long"
 	KeyVersionShort = "cmd.version.short"
 	KeyVersionLong  = "cmd.version.long"
+	KeyUpdateShort  = "cmd.update.short"
+	KeyUpdateLong   = "cmd.update.long"
 	KeyConfigFlag   = "cmd.config_flag"
 	KeyCmdElapsedMs = "cmd.elapsed_ms"
 
@@ -61,6 +63,10 @@ const (
 	KeyEditLong           = "cmd.edit.long"
 	KeyEditConfirmSummary = "edit.confirm_summary"
 	KeyEditSuccess        = "edit.success"
+
+	KeyUpdateAlreadyLatest = "update.already_latest"
+	KeyUpdateAvailable     = "update.available"
+	KeyUpdateSuccess       = "update.success"
 )
 
 // 成功摘要相关文案键。
