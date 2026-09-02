@@ -2,11 +2,11 @@
 #
 # 用法（在 PowerShell 中）：
 #   irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
-#   irm https://.../install.ps1 | iex; Install-Fuckssh -Version v0.1.0
+#   irm https://.../install.ps1 | iex; Install-Fuckssh -Version v0.6.1
 #
 # 或先下载再执行：
 #   Set-ExecutionPolicy -Scope Process Bypass
-#   .\scripts\install.ps1 -Version v0.1.0
+#   .\scripts\install.ps1 -Version v0.6.1
 
 # 将整个脚本包装为 ScriptBlock，兼容 irm | iex 和本地直接执行两种方式
 $___install = {
@@ -28,10 +28,12 @@ $___install = {
         if ($env:OS -notmatch "Windows") {
             throw "此脚本仅适用于 Windows；macOS / Linux 请使用 scripts/install.sh"
         }
-        $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+        # 读取机器级架构，避免 32 位 PowerShell、WOW64 和 ARM64 仿真影响检测结果。
+        $arch = (Get-ItemProperty -LiteralPath `
+            "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment").PROCESSOR_ARCHITECTURE
         switch ($arch) {
-            "X64" { return "fuckssh_windows_x86_64.zip" }
-            "Arm64" { return "fuckssh_windows_arm64.zip" }
+            "AMD64" { return "fuckssh_windows_x86_64.zip" }
+            "ARM64" { return "fuckssh_windows_arm64.zip" }
             default { throw "不支持的 CPU 架构: $arch" }
         }
     }
