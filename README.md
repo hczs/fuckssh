@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/hczs/fuckssh/actions/workflows/ci.yml/badge.svg)](https://github.com/hczs/fuckssh/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hczs/fuckssh)](https://goreportcard.com/report/github.com/hczs/fuckssh)
-[![Release](https://img.shields.io/badge/release-v0.6.0-blue)](https://github.com/hczs/fuckssh/releases)
+[![Release](https://img.shields.io/badge/release-v0.6.1-blue)](https://github.com/hczs/fuckssh/releases)
 
 > Cross-platform CLI for VPS SSH — from IP + password to `ssh my-vps` in minutes, using only standard `~/.ssh/config`.
 
@@ -101,13 +101,15 @@ fuckssh search --user root --port 2222 web
 curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 ```
 
-Pin a version: `curl -fsSL .../install.sh | sh -s -- --version v0.6.0`
+Pin a version: `curl -fsSL .../install.sh | sh -s -- --version v0.6.1`
 
 **Windows** (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
 ```
+
+The Windows installer supports x86_64 and ARM64. It detects the host architecture correctly even when launched from 32-bit PowerShell on 64-bit Windows.
 
 The script checks your PATH and guides you if `~/.local/bin` (or `%USERPROFILE%\.local\bin` on Windows) isn't included. After installation, a `fs` alias is ready:
 
@@ -127,7 +129,7 @@ Download from [GitHub Releases](https://github.com/hczs/fuckssh/releases) and pu
 | macOS Intel | `fuckssh_macos_x86_64.tar.gz` |
 | macOS Apple Silicon | `fuckssh_macos_arm64.tar.gz` |
 | macOS Universal | `fuckssh_macos_all.tar.gz` (Intel + Apple Silicon) |
-| Windows | `fuckssh_windows_x86_64.zip` |
+| Windows x86_64 / ARM64 | `fuckssh_windows_x86_64.zip`, `fuckssh_windows_arm64.zip` |
 
 ### Go install
 
@@ -332,7 +334,7 @@ $ fuckssh import fuckssh-backup-20260616-102739.tar.enc
 ```bash
 $ fuckssh v
 
-v0.6.0 (abc1234, 2026-06-16)
+v0.6.1 (abc1234, 2026-09-02)
 ```
 
 ## Design principles
@@ -370,7 +372,7 @@ make hooks    # enable pre-commit (auto fmt + lint on staged .go files)
 
 After cloning, run `make hooks` once. Every `git commit` will then auto-format and lint staged `.go` files.
 
-Push a `v*` tag (e.g. `v0.6.0`) to trigger the [Release workflow](.github/workflows/release.yml) — GoReleaser builds and publishes to GitHub Releases. Dry run locally: `make release-dry`.
+Push a `v*` tag (e.g. `v0.6.1`) to trigger the [Release workflow](.github/workflows/release.yml). GoReleaser builds and publishes to GitHub Releases. Dry run locally: `make release-dry`.
 
 | Trigger | Workflow | Description |
 |---------|----------|-------------|

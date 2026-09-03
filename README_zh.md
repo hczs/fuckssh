@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/hczs/fuckssh/actions/workflows/ci.yml/badge.svg)](https://github.com/hczs/fuckssh/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hczs/fuckssh)](https://goreportcard.com/report/github.com/hczs/fuckssh)
-[![Release](https://img.shields.io/badge/release-v0.6.0-blue)](https://github.com/hczs/fuckssh/releases)
+[![Release](https://img.shields.io/badge/release-v0.6.1-blue)](https://github.com/hczs/fuckssh/releases)
 
 > 跨平台 VPS SSH 配置 CLI：IP + 密码几分钟搞定免密登录，只读写标准 `~/.ssh/config`。
 
@@ -101,13 +101,15 @@ fuckssh search --user root --port 2222 web
 curl -fsSL https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.sh | sh
 ```
 
-指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.6.0`
+指定版本：`curl -fsSL .../install.sh | sh -s -- --version v0.6.1`
 
 **Windows**（PowerShell）：
 
 ```powershell
 irm https://raw.githubusercontent.com/hczs/fuckssh/master/scripts/install.ps1 | iex
 ```
+
+Windows 安装脚本支持 x86_64 和 ARM64。即使在 64 位 Windows 中通过 32 位 PowerShell 启动，也能正确识别系统架构。
 
 脚本会检测 PATH；若 `~/.local/bin`（或 Windows 下 `%USERPROFILE%\.local\bin`）未在 PATH 中，会提示如何添加。安装完成后会自动创建 `fs` 短别名：
 
@@ -127,7 +129,7 @@ fs s prod    # 等同于 fuckssh search prod
 | macOS Intel | `fuckssh_macos_x86_64.tar.gz` |
 | macOS Apple Silicon | `fuckssh_macos_arm64.tar.gz` |
 | macOS 通用二进制 | `fuckssh_macos_all.tar.gz`（Intel + Apple Silicon） |
-| Windows | `fuckssh_windows_x86_64.zip` |
+| Windows x86_64 / ARM64 | `fuckssh_windows_x86_64.zip`、`fuckssh_windows_arm64.zip` |
 
 ### Go 安装
 
@@ -332,7 +334,7 @@ $ fuckssh import fuckssh-backup-20260616-102739.tar.enc
 ```bash
 $ fuckssh v
 
-v0.6.0 (abc1234, 2026-06-16)
+v0.6.1 (abc1234, 2026-09-02)
 ```
 
 ## 设计原则
@@ -370,7 +372,7 @@ make hooks    # 一次性启用 pre-commit（提交时自动 fmt + lint）
 
 克隆仓库后建议执行一次 `make hooks`，之后每次 `git commit` 会对**已暂存**的 `.go` 文件运行 `gofmt`/`goimports` 并执行 `golangci-lint`。
 
-推送 `v*` 标签（如 `v0.6.0`）会触发 [Release 工作流](.github/workflows/release.yml)，由 GoReleaser 构建并发布到 GitHub Releases。本地试跑：`make release-dry`。
+推送 `v*` 标签（如 `v0.6.1`）会触发 [Release 工作流](.github/workflows/release.yml)，由 GoReleaser 构建并发布到 GitHub Releases。本地试跑：`make release-dry`。
 
 | 触发 | 工作流 | 说明 |
 |------|--------|------|

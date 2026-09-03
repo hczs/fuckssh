@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
   test:
@@ -21,6 +23,17 @@ jobs:
           cache: true
       - run: go mod verify
       - run: go test -race -cover ./...
+      - name: Smoke-test installer from 32-bit Windows PowerShell
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $powershell32 = Join-Path $env:WINDIR "SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
+          $binDir = Join-Path $env:RUNNER_TEMP "fuckssh-installer-test"
+          # 使用已发布版本测试当前安装脚本，避免 PR 阶段依赖尚不存在的发布包。
+          & $powershell32 -NoProfile -ExecutionPolicy Bypass -File .\scripts\install.ps1 -Version v0.6.0 -BinDir $binDir
+          if ($LASTEXITCODE -ne 0) { throw "32-bit PowerShell installer smoke test failed" }
+          & (Join-Path $binDir "fuckssh.exe") version
+          if ($LASTEXITCODE -ne 0) { throw "installed fuckssh binary failed to run" }
 
   lint:
     name: Lint

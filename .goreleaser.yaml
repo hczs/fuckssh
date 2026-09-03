@@ -19,7 +19,7 @@ builds:
       - windows
     goarch:
       - amd64 # Intel / x86_64（含 macOS Intel、Linux、Windows）
-      - arm64 # Apple Silicon / AArch64（含 macOS M 系列、Linux ARM）
+      - arm64 # Apple Silicon / AArch64（含 macOS M 系列、Linux ARM、Windows ARM）
     ldflags:
       - -s -w
       - -X github.com/fuckssh/fuckssh/internal/cmd.version={{.Version}}
